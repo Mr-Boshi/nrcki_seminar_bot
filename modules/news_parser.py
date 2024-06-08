@@ -24,8 +24,6 @@ def page_loader(browser, url):
 #This thing looks for a link with a keyed str in href
 def link_finder(browser, text : str, url = 'http://nrcki.ru'):
     page_soup = page_loader(browser, url)
-    with open("output.html", "w", encoding="utf-8") as file:
-        file.write(page_soup.prettify())
     for link in page_soup.find_all('a', href=True):
         if text in link.text:
             return link.get('href')

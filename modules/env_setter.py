@@ -10,5 +10,6 @@ def load_env():
     CHAT_ID   = os.getenv("chat_id")
     ADMIN_ID  = os.getenv("admin_id")
     TIMER     = int(os.getenv("timer"))
+    RATE      = float(os.getenv("rate_limit"))
 
-    return BOT_TOKEN, CHAT_ID, ADMIN_ID, TIMER
+    return BOT_TOKEN, CHAT_ID, ADMIN_ID, TIMER, RATE

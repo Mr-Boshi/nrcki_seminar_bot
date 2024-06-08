@@ -8,11 +8,11 @@ from threading import Thread
 
 # Load environment variables from the .env file
 load_dotenv()
-BOT_TOKEN, CHAT, ADMIN, TIMER = load_env()
+BOT_TOKEN, CHAT, ADMIN, TIMER, RATE = load_env()
 seminars = ['Отдел Т: Эксперименты на токамаках', 'Инженерно-физические проблемы термоядерных реакторов', 'Теория магнитного удержания плазмы', 'Инженерно-физический семинар по токамакам']
 filedir = 'news'
 filepath = os.path.join(filedir, 'news.json')
-limiter = RateLimiter(0.5)
+limiter = RateLimiter(1/RATE)
 
 # Create the bot
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -38,7 +38,7 @@ def handle_find(message):
         search = ''
     
     while not limiter.ready():
-        time.sleep(0.5)
+        time.sleep(0.25)
     keyboard = InlineKeyboardMarkup()
     keyboard.row(InlineKeyboardButton(seminars[0], callback_data='find_0' + '_' + search))
     keyboard.row(InlineKeyboardButton(seminars[1], callback_data='find_1' + '_' + search))
@@ -104,41 +104,47 @@ def find_callback_handler(call):
 
     selected = int(call.data[5])
     prompt = call.data[7:]
-    bot.delete_message(call.message.chat.id, call.message.message_id)
+    chat_id = call.message.chat.id
+    message_id = call.message.message_id
 
-    something_found = False
-    if prompt != '':
-        news = load_news(filepath)
+    bot.delete_message(chat_id, message_id)
 
-        matching_indexes = [[],[],[],[]]
-        for i in range(len(seminars)):
-            sublist = news[i]
-            for index, element in enumerate(sublist):
-                if prompt in element:
-                    matching_indexes[i].append(index)
-                    something_found = True
+    if not prompt:
+        bot.send_message(chat_id, 'Ничего не найдено.')
+        return
 
+    news = load_news(filepath)
+    matching_indexes = find_matching_indexes(news, prompt)
 
-    if something_found:
-        if selected == 4:
-            for i in range(4):
-                founds = matching_indexes[i]
-                if len(founds) > 0:
-                    bot.send_message(call.message.chat.id, f"Найдено среди семинаров {seminars[i]}:")
-                    for j in founds:
-                        while not limiter.ready():
-                            time.sleep(0.5)
-                        bot.send_message(call.message.chat.id, news[i][j])
-        else:
-            founds = matching_indexes[selected]
-            if len(founds) > 0:
-                bot.send_message(call.message.chat.id, f"Найдено среди семинаров {seminars[selected]}:")
-                for j in founds:
-                    while not limiter.ready():
-                        time.sleep(0.5)
-                    bot.send_message(call.message.chat.id, news[selected][j])
+    if any(matching_indexes):
+        send_matching_news(chat_id, selected, matching_indexes, news)
     else:
-        bot.send_message(call.message.chat.id, 'Ничего не найдено.')
+        bot.send_message(chat_id, 'Ничего не найдено.')
+
+def find_matching_indexes(news, prompt):
+    matching_indexes = [[] for _ in range(4)]
+    prompt_lower = prompt.lower()  # Convert the prompt to lowercase
+    
+    for i, sublist in enumerate(news):
+        for index, element in enumerate(sublist):
+            if prompt_lower in element.lower():  # Convert element to lowercase for comparison
+                matching_indexes[i].append(index)
+    return matching_indexes
+
+def send_matching_news(chat_id, selected, matching_indexes, news):
+    if selected == 4:
+        for i in range(4):
+            send_news_for_seminar(chat_id, i, matching_indexes[i], news)
+    else:
+        send_news_for_seminar(chat_id, selected, matching_indexes[selected], news)
+
+def send_news_for_seminar(chat_id, seminar_index, founds, news):
+    if founds:
+        bot.send_message(chat_id, f"Найдено среди семинаров {seminars[seminar_index]}:")
+        for index in founds:
+            while not limiter.ready():
+                time.sleep(0.5)
+            bot.send_message(chat_id, news[seminar_index][index])
 
 
 # ==============================================================================
