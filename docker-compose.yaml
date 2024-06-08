@@ -1,0 +1,15 @@
+services:
+  seminar-bot:
+        container_name: seminar-bot
+        restart: unless-stopped
+        logging:
+            options:
+                max-size: 1m
+        environment:
+          - bot_token=CHANGEME
+          - chat_id=CHANGEME
+          - admin_id=CHANGEME
+          - timer=1
+          - rate_limit=0.5
+
+        image: docker.io/library/seminar_bot:0.6.2

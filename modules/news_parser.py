@@ -1,4 +1,3 @@
-import requests
 from bs4 import BeautifulSoup
 import re
 from selenium.webdriver.chrome.options import Options
@@ -9,6 +8,9 @@ def create_browser():
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--log-level=3")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
 
     # Initialize the Chrome driver with headless option
     browser = webdriver.Chrome(options=chrome_options)

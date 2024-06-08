@@ -206,8 +206,8 @@ def check_new_entries(seminar_names):
 update_news(filedir, filepath)
 news = load_news(filepath)
 bot.send_message(chat_id=CHAT, text='Бот запущен! Вот последние записи о семинарах:')
-# for i in range(len(seminars)):
-#     bot.send_message(chat_id=CHAT, text=seminars[i] + ': \n' + news[i][0])
+for i in range(len(seminars)):
+    bot.send_message(chat_id=CHAT, text=seminars[i] + ': \n' + news[i][0])
 
 # Schedule the hourly job to run every hour
 schedule.every(TIMER).hours.do(lambda: check_new_entries(seminars))
