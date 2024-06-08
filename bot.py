@@ -1,98 +1,227 @@
-import telebot
-import requests
-from bs4 import BeautifulSoup
-import re
-import schedule
-import time
-from functools import partial
+import telebot, schedule, time, json, os
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-class seminar_info:
-    def __init__(self, text):
-        pass
-
-    def parse_text(self, text):
-        pass
-
-# Main function to check for updates and send notifications
-def get_all_news():
-    # URL of the webpage to monitor
-    url = 'http://nrcki.ru/product/nrcki/seminar-ehksperimenty-na-tokamakah-37157.shtml'
-    date_pattern = r'\b\d{1,2}\s(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\b'
-    response = requests.get(url)
-    html_content = response.text
-    soup = BeautifulSoup(html_content, 'html.parser')
-    seminars_div = soup.find('div', class_='product-full-desc-page')
-    # Initialize an empty list to store the text content of <p> tags
-    paragraphs = []
-
-    # Loop through each <p> tag inside the content div and extract the text
-    for p_tag in seminars_div.find_all('p'):
-        paragraphs.append(p_tag.get_text())
-    
-
-    filtered_empty_paragraphs = [item for item in paragraphs if len(item) > 10]
-    filtered_paragraphs = filtered_empty_paragraphs[2:]
-
-    indexes_of_dates = [index for index, string in enumerate(filtered_paragraphs) if re.match(date_pattern, string)]
-
-    merged_paragraphs = []
-
-    for index in range(len(filtered_paragraphs)):
-        if index in indexes_of_dates:
-            merged_paragraphs.append(filtered_paragraphs[index])
-        else:
-            merged_paragraphs[-1] += '\n'
-            merged_paragraphs[-1] += filtered_paragraphs[index]
-
-    formated_paragraphs = []
-    for paragraph in merged_paragraphs:
-        modified_paragraph = paragraph.replace('"', '**')
-        formated_paragraphs.append(modified_paragraph)
-    
-    return formated_paragraphs
+from dotenv import load_dotenv
+from modules import get_all_news, load_env, RateLimiter
+from threading import Thread
 
 
-BOT_TOKEN = '7287948971:AAH2WK2jVgHmhHwtK9E8GCWNjKDjaDPejno'
+# Load environment variables from the .env file
+load_dotenv()
+BOT_TOKEN, CHAT, ADMIN, TIMER = load_env()
+seminars = ['Отдел Т: Эксперименты на токамаках', 'Инженерно-физические проблемы термоядерных реакторов', 'Теория магнитного удержания плазмы', 'Инженерно-физический семинар по токамакам']
+filedir = 'news'
+filepath = os.path.join(filedir, 'news.json')
+limiter = RateLimiter(0.5)
 
+# Create the bot
 bot = telebot.TeleBot(BOT_TOKEN)
 
+# Handling greetings
 @bot.message_handler(commands=['start', 'hello'])
 def send_welcome(message):
-    bot.reply_to(message, "Howdy, how are you doing?")
+    while not limiter.ready():
+        time.sleep(0.5)
+    text = 'Приветствую! Я умею присылать последние новости о семинарах и искать среди них записи, содержащие интересующий вас текст.'
+    bot.reply_to(message, text)
 
-# @bot.message_handler(commands=['get_last'])
-# def send_last_enrty(message):
-#     print(news[0])
-#     bot.send_message(chat_id=293970271, text=news[0], parse_mode='Markdown')
+# ==============================================================================
+# ==============================================================================
+@bot.message_handler(commands=['find'])
+def handle_find(message):
+    try:
+        # Extract the argument from the message text
+        arg = message.text.split(' ')[1]
+        # Convert the argument to an integer
+        search = arg
+    except (IndexError, ValueError):
+        search = ''
+    
+    while not limiter.ready():
+        time.sleep(0.5)
+    keyboard = InlineKeyboardMarkup()
+    keyboard.row(InlineKeyboardButton(seminars[0], callback_data='find_0' + '_' + search))
+    keyboard.row(InlineKeyboardButton(seminars[1], callback_data='find_1' + '_' + search))
+    keyboard.row(InlineKeyboardButton(seminars[2], callback_data='find_2' + '_' + search))
+    keyboard.row(InlineKeyboardButton(seminars[3], callback_data='find_3' + '_' + search))
+    keyboard.row(InlineKeyboardButton('Все!',      callback_data='find_4' + '_' + search))
 
-news = get_all_news()
+    bot.send_message(message.chat.id, "Какие семинары вас интересуют?:", reply_markup=keyboard)
 
-def check_new_entries(old_news):
-    new_news = get_all_news()
-    new_entries = len(new_news) - len(old_news)
 
-    if new_entries == 1:
-        bot.send_message(chat_id='-4112723585', text='Внимание! Объявлен новый семинар!')
-        bot.send_message(chat_id='-4112723585', text=new_news[0])
-    elif new_entries > 1:
-        bot.send_message(chat_id='-4112723585', text=f'Внимание! Объявлено {new_entries} новых семинаров')
-        for i in range(new_entries, 0, -1):
-            bot.send_message(chat_id='-4112723585', text=new_news[i-1])
-        
-    elif new_entries < 0:
-        bot.send_message(chat_id='293970271', text='Number of entries got LOWER')
+@bot.message_handler(commands=['last'])
+def handle_last(message):
+    try:
+        # Extract the argument from the message text
+        arg = message.text.split(' ')[1]
+        # Convert the argument to an integer
+        num = arg
+    except (IndexError, ValueError):
+        num = '1'
+    
+    while not limiter.ready():
+        time.sleep(0.5)
+    keyboard = InlineKeyboardMarkup()
+    keyboard.row(InlineKeyboardButton(seminars[0], callback_data='last_0' + '_' + num))
+    keyboard.row(InlineKeyboardButton(seminars[1], callback_data='last_1' + '_' + num))
+    keyboard.row(InlineKeyboardButton(seminars[2], callback_data='last_2' + '_' + num))
+    keyboard.row(InlineKeyboardButton(seminars[3], callback_data='last_3' + '_' + num))
+    keyboard.row(InlineKeyboardButton('Все!',      callback_data='last_4' + '_' + num))
+
+    bot.send_message(message.chat.id, "Какие семинары вас интересуют?:", reply_markup=keyboard)
+
+# ==============================================================================
+# ==============================================================================
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('last_'))
+def last_callback_handler(call):
+    bot.answer_callback_query(call.id)
+
+    selected = int(call.data[5])
+    entries  = int(call.data[7:])
+    bot.delete_message(call.message.chat.id, call.message.message_id)
+    news = load_news(filepath)
+
+    if selected == 4:
+        for i in range(4):
+            bot.send_message(call.message.chat.id, f"Последние семинары в {seminars[i]}:")
+            for j in range(entries):
+                while not limiter.ready():
+                    time.sleep(0.5)
+                bot.send_message(call.message.chat.id, news[i][j])
     else:
-        bot.send_message(chat_id='-4112723585', text='Nothing new, working good')
+        bot.send_message(call.message.chat.id, f"Последние семинары в {seminars[selected]}:")
+        for i in range(entries):
+            while not limiter.ready():
+                time.sleep(0.5)
+            bot.send_message(call.message.chat.id, news[selected][i])
 
-    old_news = new_news
 
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('find_'))
+def find_callback_handler(call):
+    bot.answer_callback_query(call.id)
+
+    selected = int(call.data[5])
+    prompt = call.data[7:]
+    bot.delete_message(call.message.chat.id, call.message.message_id)
+
+    something_found = False
+    if prompt != '':
+        news = load_news(filepath)
+
+        matching_indexes = [[],[],[],[]]
+        for i in range(len(seminars)):
+            sublist = news[i]
+            for index, element in enumerate(sublist):
+                if prompt in element:
+                    matching_indexes[i].append(index)
+                    something_found = True
+
+
+    if something_found:
+        if selected == 4:
+            for i in range(4):
+                founds = matching_indexes[i]
+                if len(founds) > 0:
+                    bot.send_message(call.message.chat.id, f"Найдено среди семинаров {seminars[i]}:")
+                    for j in founds:
+                        while not limiter.ready():
+                            time.sleep(0.5)
+                        bot.send_message(call.message.chat.id, news[i][j])
+        else:
+            founds = matching_indexes[selected]
+            if len(founds) > 0:
+                bot.send_message(call.message.chat.id, f"Найдено среди семинаров {seminars[selected]}:")
+                for j in founds:
+                    while not limiter.ready():
+                        time.sleep(0.5)
+                    bot.send_message(call.message.chat.id, news[selected][j])
+    else:
+        bot.send_message(call.message.chat.id, 'Ничего не найдено.')
+
+
+# ==============================================================================
+# ==============================================================================
+
+def update_news(filedir, filepath):
+    # Ensure the directory exists
+    os.makedirs(filedir, exist_ok=True)
+    
+    # Calculate the time difference in hours if the file exists
+    if os.path.exists(filepath):
+        last_modified_time = os.path.getmtime(filepath)
+        current_time = time.time()
+        time_diff_hours = (current_time - last_modified_time) / 3600
+    else:
+        time_diff_hours = float('inf')  # Use infinity to ensure news is fetched if file doesn't exist
+    
+    # Fetch news if the file is older than 1 hour or doesn't exist
+    if time_diff_hours >= 0.75:
+        news = get_all_news()
+        with open(filepath, "w") as json_file:
+            json.dump(news, json_file)
+
+
+def load_news(filepath):
+    with open(filepath, "r") as json_file:
+        news = json.load(json_file)
+    return news
+
+def check_new_entries(seminar_names):
+    old_news = load_news(filepath)
+    update_news(filedir, filepath)
+    new_news = load_news(filepath)
+
+    for i in range(len(seminar_names)):
+        old_news_seminar = old_news[i]
+        new_news_seminar = new_news[i]
+       
+        new_entries = len(new_news_seminar) - len(old_news_seminar)
+        if new_entries == 1:
+            bot.send_message(chat_id=CHAT, text='Внимание! Новый семинар.' + ' ' + seminar_names[i])
+            bot.send_message(chat_id=CHAT, text=new_news_seminar[0])
+        elif new_entries > 1:
+            bot.send_message(chat_id=CHAT, text=f'Внимание! Объявлено {new_entries} новых семинаров.' + ' ' + seminar_names[i])
+            for i in range(new_entries, 0, -1):
+                bot.send_message(chat_id=CHAT, text=new_news_seminar[i-1])
+            
+        elif new_entries < 0:
+            bot.send_message(chat_id=ADMIN, text='Number of entries got LOWER. Something is WRONG.')
+        else:
+            bot.send_message(chat_id=CHAT, text='Nothing new, working good')
+
+
+
+
+# ==============================================================================
+# ==============================================================================
+
+update_news(filedir, filepath)
+news = load_news(filepath)
+bot.send_message(chat_id=CHAT, text='Бот запущен! Вот последние записи о семинарах:')
+# for i in range(len(seminars)):
+#     bot.send_message(chat_id=CHAT, text=seminars[i] + ': \n' + news[i][0])
 
 # Schedule the hourly job to run every hour
-schedule.every(10).seconds.do(lambda: check_new_entries(news))
+schedule.every(TIMER).hours.do(lambda: check_new_entries(seminars))
+
+# ==============================================================================
+# ==============================================================================
 
 # Main loop to run the scheduler
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+def run_bot():
+    bot.infinity_polling()
 
-# bot.infinity_polling()
+
+def run_schedule():
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+# ==============================================================================
+# ==============================================================================
+
+if __name__ == '__main__':
+    Thread(target=run_bot).start()
+    Thread(target=run_schedule).start()
