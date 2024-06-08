@@ -8,7 +8,7 @@ from threading import Thread
 
 # Load environment variables from the .env file
 load_dotenv()
-BOT_TOKEN, CHAT, ADMIN, TIMER, RATE = load_env()
+BOT_TOKEN, CHAT, ADMIN, TIMER, RATE, SILENT_SRT = load_env()
 seminars = ['Отдел Т: Эксперименты на токамаках', 'Инженерно-физические проблемы термоядерных реакторов', 'Теория магнитного удержания плазмы', 'Инженерно-физический семинар по токамакам']
 filedir = 'news'
 filepath = os.path.join(filedir, 'news.json')
@@ -194,8 +194,9 @@ def check_new_entries(seminar_names):
             
         elif new_entries < 0:
             bot.send_message(chat_id=ADMIN, text='Number of entries got LOWER. Something is WRONG.')
-        else:
-            bot.send_message(chat_id=CHAT, text='Nothing new, working good')
+        ## for debugging
+        # else:
+        #     bot.send_message(chat_id=CHAT, text='Nothing new, working good')
 
 
 
@@ -205,9 +206,10 @@ def check_new_entries(seminar_names):
 
 update_news(filedir, filepath)
 news = load_news(filepath)
-bot.send_message(chat_id=CHAT, text='Бот запущен! Вот последние записи о семинарах:')
-for i in range(len(seminars)):
-    bot.send_message(chat_id=CHAT, text=seminars[i] + ': \n' + news[i][0])
+if not SILENT_SRT:
+    bot.send_message(chat_id=CHAT, text='Бот запущен! Вот последние записи о семинарах:')
+    for i in range(len(seminars)):
+        bot.send_message(chat_id=CHAT, text=seminars[i] + ': \n' + news[i][0])
 
 # Schedule the hourly job to run every hour
 schedule.every(TIMER).hours.do(lambda: check_new_entries(seminars))

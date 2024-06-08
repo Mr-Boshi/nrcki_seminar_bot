@@ -9,3 +9,4 @@ echo "chat_id=$chat_id" >> $ENV_FILE
 echo "admin_id=$admin_id" >> $ENV_FILE
 echo "timer=$timer" >> $ENV_FILE
 echo "rate_limit=$rate_limit" >> $ENV_FILE
+echo "silent_start=$silent_start" >> $ENV_FILE
