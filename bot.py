@@ -2,13 +2,14 @@ import telebot, schedule, time, json, os
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from dotenv import load_dotenv
-from modules import get_all_news, load_env, RateLimiter
+from modules import get_all_news, load_env, RateLimiter, pagagraphs_md
 from threading import Thread
 
 
 # Load environment variables from the .env file
 load_dotenv()
-BOT_TOKEN, CHAT, ADMIN, TIMER, RATE, SILENT_SRT = load_env()
+BOT_TOKEN, CHAT, ADMIN, MODERATORS, TIMER, RATE, SILENT_SRT = load_env()
+
 seminars = ['Отдел Т: Эксперименты на токамаках', 'Инженерно-физические проблемы термоядерных реакторов', 'Теория магнитного удержания плазмы', 'Инженерно-физический семинар по токамакам']
 filedir = 'news'
 filepath = os.path.join(filedir, 'news.json')
@@ -16,38 +17,19 @@ limiter = RateLimiter(1/RATE)
 
 # Create the bot
 bot = telebot.TeleBot(BOT_TOKEN)
+user_states = {}
 
 # Handling greetings
 @bot.message_handler(commands=['start', 'hello'])
 def send_welcome(message):
     while not limiter.ready():
         time.sleep(0.5)
-    text = 'Приветствую! Я умею присылать последние новости о семинарах и искать среди них записи, содержащие интересующий вас текст.'
+    text = 'Приветствую! Я умею присылать сообщения о объявленных семинарах. Еще можно вывести сообщения о последних семинарах в чат. Для этого воспользуйтесь командой `/last` и выберите интересующие вас тематики. Если хочется больше семинаров, можно ввести `/last N` для вывода N последних семинаров. \
+            Также я могу искать записи, содержащие интересующий вас текст. Для этого введите `/find` и свой поисковый запрос в следующем сообщении.'
     bot.reply_to(message, text)
 
 # ==============================================================================
 # ==============================================================================
-@bot.message_handler(commands=['find'])
-def handle_find(message):
-    try:
-        # Extract the argument from the message text
-        arg = message.text.split(' ')[1]
-        # Convert the argument to an integer
-        search = arg
-    except (IndexError, ValueError):
-        search = ''
-    
-    while not limiter.ready():
-        time.sleep(0.25)
-    keyboard = InlineKeyboardMarkup()
-    keyboard.row(InlineKeyboardButton(seminars[0], callback_data='find_0' + '_' + search))
-    keyboard.row(InlineKeyboardButton(seminars[1], callback_data='find_1' + '_' + search))
-    keyboard.row(InlineKeyboardButton(seminars[2], callback_data='find_2' + '_' + search))
-    keyboard.row(InlineKeyboardButton(seminars[3], callback_data='find_3' + '_' + search))
-    keyboard.row(InlineKeyboardButton('Все!',      callback_data='find_4' + '_' + search))
-
-    bot.send_message(message.chat.id, "Какие семинары вас интересуют?:", reply_markup=keyboard)
-
 
 @bot.message_handler(commands=['last'])
 def handle_last(message):
@@ -72,29 +54,68 @@ def handle_last(message):
 
 # ==============================================================================
 # ==============================================================================
+@bot.message_handler(commands=['find'])
+def handle_find(message):
+    user_id = message.from_user.id
+    # Set the state for the user
+    user_states[user_id] = 'waiting_for_prompt'
+    bot.reply_to(message, "Пожалуйста, отправьте свой поисковый запрос в следующем сообщении.")
+
+@bot.message_handler(commands=['notify'])
+def handle_notify(message):
+    user_id = message.from_user.id
+    # Set the state for the user
+    if user_id in MODERATORS + [ADMIN]:
+        user_states[user_id] = 'waiting_for_message'
+        bot.reply_to(message, "Пожалуйста, отправьте сообщение для пересылки в чат.")
+
+@bot.message_handler(func=lambda message: True)
+def handle_all_messages(message):
+    user_id = message.from_user.id
+    if user_id in user_states and user_states[user_id] == 'waiting_for_prompt':
+        # Process the text provided by the user
+        search = message.text
+        
+        # Clear the state for the user
+        del user_states[user_id]
+        
+        keyboard = InlineKeyboardMarkup()
+        keyboard.row(InlineKeyboardButton(seminars[0], callback_data='find_0' + '_' + search))
+        keyboard.row(InlineKeyboardButton(seminars[1], callback_data='find_1' + '_' + search))
+        keyboard.row(InlineKeyboardButton(seminars[2], callback_data='find_2' + '_' + search))
+        keyboard.row(InlineKeyboardButton(seminars[3], callback_data='find_3' + '_' + search))
+        keyboard.row(InlineKeyboardButton('Все!',      callback_data='find_4' + '_' + search))
+
+        bot.send_message(message.chat.id, "Какие семинары вас интересуют?:", reply_markup=keyboard)
+
+    elif user_id in user_states and user_states[user_id] == 'waiting_for_message':
+        new_post = message.text
+        
+        # Clear the state for the user
+        del user_states[user_id]
+
+        bot.send_message(chat_id=CHAT, text=new_post)
+        bot.send_message(chat_id=message.chat.id, text='Ваше сообщение отправлено.')
+
+# ==============================================================================
+# ==============================================================================
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('last_'))
 def last_callback_handler(call):
     bot.answer_callback_query(call.id)
 
     selected = int(call.data[5])
-    entries  = int(call.data[7:])
+    entries  = range(int(call.data[7:]))
     bot.delete_message(call.message.chat.id, call.message.message_id)
     news = load_news(filepath)
 
     if selected == 4:
         for i in range(4):
-            bot.send_message(call.message.chat.id, f"Последние семинары в {seminars[i]}:")
-            for j in range(entries):
-                while not limiter.ready():
-                    time.sleep(0.5)
-                bot.send_message(call.message.chat.id, news[i][j])
+            info_text = f"Последние семинары в '{seminars[i]}':"
+            send_news_for_seminar(call.message.chat.id, i, entries, news, info_text)
     else:
-        bot.send_message(call.message.chat.id, f"Последние семинары в {seminars[selected]}:")
-        for i in range(entries):
-            while not limiter.ready():
-                time.sleep(0.5)
-            bot.send_message(call.message.chat.id, news[selected][i])
+        info_text = f"Последние семинары в '{seminars[selected]}':"
+        send_news_for_seminar(call.message.chat.id, selected, entries, news, info_text)
 
 
 
@@ -134,17 +155,20 @@ def find_matching_indexes(news, prompt):
 def send_matching_news(chat_id, selected, matching_indexes, news):
     if selected == 4:
         for i in range(4):
-            send_news_for_seminar(chat_id, i, matching_indexes[i], news)
+            info_text = f"Найдено среди семинаров '{seminars[i]}':"
+            send_news_for_seminar(chat_id, i, matching_indexes[i], news, info_text)
     else:
-        send_news_for_seminar(chat_id, selected, matching_indexes[selected], news)
+        info_text = f"Найдено среди семинаров '{seminars[selected]}':"
+        send_news_for_seminar(chat_id, selected, matching_indexes[selected], news, info_text)
 
-def send_news_for_seminar(chat_id, seminar_index, founds, news):
+def send_news_for_seminar(chat_id, seminar_index, founds, news, info_text = None):
     if founds:
-        bot.send_message(chat_id, f"Найдено среди семинаров {seminars[seminar_index]}:")
+        if info_text:
+            bot.send_message(chat_id, info_text)
         for index in founds:
             while not limiter.ready():
                 time.sleep(0.5)
-            bot.send_message(chat_id, news[seminar_index][index])
+            bot.send_message(chat_id, pagagraphs_md(news[seminar_index][index]), parse_mode='HTML')
 
 
 # ==============================================================================

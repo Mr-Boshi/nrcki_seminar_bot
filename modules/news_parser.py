@@ -28,7 +28,11 @@ def link_finder(browser, text : str, url = 'http://nrcki.ru'):
     page_soup = page_loader(browser, url)
     for link in page_soup.find_all('a', href=True):
         if text in link.text:
+            print(f'Link to "{text}" found: {link.get("href")}')
             return link.get('href')
+    
+    print(f'Links with "{text}" not found.')
+    return None
     
 # This thing finds the links to seminars pages. Didn't want to hardcode them in case they change
 def seminar_link_finder(browser = None):
@@ -65,8 +69,6 @@ def parse_seminars_soup(soup):
     filtered_empty_paragraphs = [item for item in paragraphs if len(item) > 2]
     indexes_of_years = [index for index, string in enumerate(filtered_empty_paragraphs) if re.match(year_pattern, string)]
     filtered_paragraphs = filtered_empty_paragraphs[indexes_of_years[0]:]
-
-    # print(indexes_of_years)
     
     indexes_of_dates = [index for index, string in enumerate(filtered_paragraphs) if re.match(date_pattern, string)]
     indexes_of_years = [index for index, string in enumerate(filtered_paragraphs) if re.match(year_pattern, string)]
@@ -83,6 +85,22 @@ def parse_seminars_soup(soup):
             merged_paragraphs[-1] += filtered_paragraphs[index]
 
     return merged_paragraphs
+
+def pagagraphs_md(paragraph):
+    italic_words = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье', 'января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября','декабря']
+    bold_words = ['тема', 'Тема', 'доклад', 'Доклад', 'докладчик', 'Докладчик', 'докладчики', 'Докладчики','автор', 'Автор', 'авторы', 'Авторы']
+    escaped_italic_words = [re.escape(word) for word in italic_words]
+    escaped_bold_words = [re.escape(word) for word in bold_words]
+    
+    # Create a regex pattern to match the words
+    pattern_italic = re.compile(r'\b(' + '|'.join(escaped_italic_words) + r')\b', re.IGNORECASE)
+    pattern_bold = re.compile(r'\b(' + '|'.join(escaped_bold_words) + r')\b', re.IGNORECASE)
+    
+    # Replace matched words with wrapped words
+    italised_text = pattern_italic.sub(r'<i>\1</i>', paragraph)
+    wrapped_text = pattern_bold.sub(r'<b>\1</b>', italised_text)
+    
+    return wrapped_text
 
 
 # Main function to check for updates and send notifications
