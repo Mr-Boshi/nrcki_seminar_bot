@@ -11,15 +11,21 @@ load_dotenv()
 BOT_TOKEN, CHAT, ADMIN, MODERATORS, TIMER, RATE, SILENT_SRT = load_env()
 
 seminars = ['Отдел Т: Эксперименты на токамаках', 'Инженерно-физические проблемы термоядерных реакторов', 'Теория магнитного удержания плазмы', 'Инженерно-физический семинар по токамакам']
+keybord_options = seminars + ['Все!']
+# Dir name and file name are static so there is no need to forward them to any functions
 filedir = 'news'
+os.makedirs(filedir, exist_ok=True)
 filepath = os.path.join(filedir, 'news.json')
-limiter = RateLimiter(1/RATE)
+subsfile = os.path.join(filedir, 'subscribtions.json')
 
-# Create the bot
-bot = telebot.TeleBot(BOT_TOKEN)
+# Create the bot and some sotrage variables
+limiter = RateLimiter(1/RATE)
 user_states = {}
+subscriptions = []
+bot = telebot.TeleBot(BOT_TOKEN)
 
 # Handling greetings
+# ==============================================================================
 @bot.message_handler(commands=['start', 'hello'])
 def send_welcome(message):
     while not limiter.ready():
@@ -28,9 +34,17 @@ def send_welcome(message):
             Также я могу искать записи, содержащие интересующий вас текст. Для этого введите `/find` и свой поисковый запрос в следующем сообщении.'
     bot.reply_to(message, text)
 
+# Setting the keyboard to choose the seminar
 # ==============================================================================
-# ==============================================================================
+def setup_keyboard(prefix, num):
+    keyboard = InlineKeyboardMarkup()
+    for i in range(len(keybord_options)):
+        keyboard.row(InlineKeyboardButton(keybord_options[i], callback_data=f'{prefix}_{i}_{num}'))
+  
+    return keyboard
 
+# Handling '/last' request
+# ==============================================================================
 @bot.message_handler(commands=['last'])
 def handle_last(message):
     try:
@@ -43,16 +57,11 @@ def handle_last(message):
     
     while not limiter.ready():
         time.sleep(0.5)
-    keyboard = InlineKeyboardMarkup()
-    keyboard.row(InlineKeyboardButton(seminars[0], callback_data='last_0' + '_' + num))
-    keyboard.row(InlineKeyboardButton(seminars[1], callback_data='last_1' + '_' + num))
-    keyboard.row(InlineKeyboardButton(seminars[2], callback_data='last_2' + '_' + num))
-    keyboard.row(InlineKeyboardButton(seminars[3], callback_data='last_3' + '_' + num))
-    keyboard.row(InlineKeyboardButton('Все!',      callback_data='last_4' + '_' + num))
-
+        
+    keyboard = setup_keyboard('last', num)
     bot.send_message(message.chat.id, "Какие семинары вас интересуют?:", reply_markup=keyboard)
 
-# ==============================================================================
+# Handling '/find' request
 # ==============================================================================
 @bot.message_handler(commands=['find'])
 def handle_find(message):
@@ -61,6 +70,8 @@ def handle_find(message):
     user_states[user_id] = 'waiting_for_prompt'
     bot.reply_to(message, "Пожалуйста, отправьте свой поисковый запрос в следующем сообщении.")
 
+# Handling '/notify' request
+# ==============================================================================
 @bot.message_handler(commands=['notify'])
 def handle_notify(message):
     user_id = message.from_user.id
@@ -69,6 +80,32 @@ def handle_notify(message):
         user_states[user_id] = 'waiting_for_message'
         bot.reply_to(message, "Пожалуйста, отправьте сообщение для пересылки в чат.")
 
+# Handling '/subscribe' request
+# ==============================================================================
+@bot.message_handler(commands=['subscribe'])
+def handle_notify(message):
+    user_id = message.from_user.id
+    bot.reply_to(message, "Вы были успешно добавлены в список рассылки")
+    # Set the state for the user
+    if not user_id in subscriptions:
+        subscriptions.append(user_id)
+        with open(subsfile, "w") as json_file:
+            json.dump(subscriptions, json_file)
+
+# Handling '/unsubscribe' request
+# ==============================================================================
+@bot.message_handler(commands=['unsubscribe'])
+def handle_notify(message):
+    user_id = message.from_user.id
+    bot.reply_to(message, "Больше уведомления вам приходить не будут")
+    # Set the state for the user
+    if user_id in subscriptions:
+        subscriptions.remove(user_id)
+        with open(subsfile, "w") as json_file:
+            json.dump(subscriptions, json_file)
+
+# Handling find-messages and forward-messages
+# ==============================================================================
 @bot.message_handler(func=lambda message: True)
 def handle_all_messages(message):
     user_id = message.from_user.id
@@ -78,14 +115,7 @@ def handle_all_messages(message):
         
         # Clear the state for the user
         del user_states[user_id]
-        
-        keyboard = InlineKeyboardMarkup()
-        keyboard.row(InlineKeyboardButton(seminars[0], callback_data='find_0' + '_' + search))
-        keyboard.row(InlineKeyboardButton(seminars[1], callback_data='find_1' + '_' + search))
-        keyboard.row(InlineKeyboardButton(seminars[2], callback_data='find_2' + '_' + search))
-        keyboard.row(InlineKeyboardButton(seminars[3], callback_data='find_3' + '_' + search))
-        keyboard.row(InlineKeyboardButton('Все!',      callback_data='find_4' + '_' + search))
-
+        keyboard = setup_keyboard('find', search)
         bot.send_message(message.chat.id, "Какие семинары вас интересуют?:", reply_markup=keyboard)
 
     elif user_id in user_states and user_states[user_id] == 'waiting_for_message':
@@ -97,28 +127,41 @@ def handle_all_messages(message):
         bot.send_message(chat_id=CHAT, text=new_post)
         bot.send_message(chat_id=message.chat.id, text='Ваше сообщение отправлено.')
 
+# Handling responses from the keyboard
 # ==============================================================================
 # ==============================================================================
-
 @bot.callback_query_handler(func=lambda call: call.data.startswith('last_'))
 def last_callback_handler(call):
+    # Answer the callback query
     bot.answer_callback_query(call.id)
 
+    # Extract selected index and entries range from call data
     selected = int(call.data[5])
-    entries  = range(int(call.data[7:]))
-    bot.delete_message(call.message.chat.id, call.message.message_id)
-    news = load_news(filepath)
+    entries = range(int(call.data[7:]))
 
+    # Delete the original message
+    try:
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+    except:
+        pass
+
+    # Load news data
+    news = load_news()
+
+    # Define the info text template
+    info_text_template = "Последние семинары в '{}':"
+
+    # If all seminars are selected
     if selected == 4:
         for i in range(4):
-            info_text = f"Последние семинары в '{seminars[i]}':"
+            info_text = info_text_template.format(seminars[i])
             send_news_for_seminar(call.message.chat.id, i, entries, news, info_text)
+    # If one seminar is selected
     else:
-        info_text = f"Последние семинары в '{seminars[selected]}':"
+        info_text = info_text_template.format(seminars[selected])
         send_news_for_seminar(call.message.chat.id, selected, entries, news, info_text)
 
-
-
+# ==============================================================================
 @bot.callback_query_handler(func=lambda call: call.data.startswith('find_'))
 def find_callback_handler(call):
     bot.answer_callback_query(call.id)
@@ -171,13 +214,11 @@ def send_news_for_seminar(chat_id, seminar_index, founds, news, info_text = None
             bot.send_message(chat_id, pagagraphs_md(news[seminar_index][index]), parse_mode='HTML')
 
 
+# Background news checking functions
 # ==============================================================================
 # ==============================================================================
 
-def update_news(filedir, filepath):
-    # Ensure the directory exists
-    os.makedirs(filedir, exist_ok=True)
-    
+def update_news():
     # Calculate the time difference in hours if the file exists
     if os.path.exists(filepath):
         last_modified_time = os.path.getmtime(filepath)
@@ -193,47 +234,61 @@ def update_news(filedir, filepath):
             json.dump(news, json_file)
 
 
-def load_news(filepath):
+def load_news():
     with open(filepath, "r") as json_file:
         news = json.load(json_file)
     return news
 
-def check_new_entries(seminar_names):
-    old_news = load_news(filepath)
-    update_news(filedir, filepath)
-    new_news = load_news(filepath)
+def check_new_entries():
+    if not os.path.exists(filepath):
+        update_news()
+    
+    old_news = load_news()
+    update_news()
+    new_news = load_news()
 
-    for i in range(len(seminar_names)):
+    for i in range(len(seminars)):
         old_news_seminar = old_news[i]
         new_news_seminar = new_news[i]
        
         new_entries = len(new_news_seminar) - len(old_news_seminar)
+        chats = [CHAT] +  subscriptions
         if new_entries == 1:
-            bot.send_message(chat_id=CHAT, text='Внимание! Новый семинар.' + ' ' + seminar_names[i])
-            bot.send_message(chat_id=CHAT, text=new_news_seminar[0])
+            for chat in chats:
+                info_text = f'Внимание! Новый семинар. {seminars[i]}'
+                send_news_for_seminar(chat, i, 0, new_news_seminar, info_text)
         elif new_entries > 1:
-            bot.send_message(chat_id=CHAT, text=f'Внимание! Объявлено {new_entries} новых семинаров.' + ' ' + seminar_names[i])
-            for i in range(new_entries, 0, -1):
-                bot.send_message(chat_id=CHAT, text=new_news_seminar[i-1])
+            for chat in chats:
+                bot.send_message(chat_id=chat, text=f'Внимание! Объявлено {new_entries} новых семинаров.' + ' ' + seminars[i])
+                for j in range(new_entries, 0, -1):
+                    send_news_for_seminar(chat, i, j-1, new_news_seminar)
             
         elif new_entries < 0:
             bot.send_message(chat_id=ADMIN, text='Number of entries got LOWER. Something is WRONG.')
-        ## for debugging
+        # for debugging
         # else:
         #     bot.send_message(chat_id=CHAT, text='Nothing new, working good')
 
 
+# Loading list of subscribed users:
+# ==============================================================================
+def load_subscribtions():
+    if os.path.exists(subsfile):
+        with open(subsfile, "r") as json_file:
+            subs = json.load(json_file)
+        return subs
+    else:
+        return []
 
 
+# Preparation before main loop
 # ==============================================================================
 # ==============================================================================
-
-update_news(filedir, filepath)
-news = load_news(filepath)
+subscriptions = load_subscribtions()
+check_new_entries()
+print(SILENT_SRT)
 if not SILENT_SRT:
-    bot.send_message(chat_id=CHAT, text='Бот запущен! Вот последние записи о семинарах:')
-    for i in range(len(seminars)):
-        bot.send_message(chat_id=CHAT, text=seminars[i] + ': \n' + news[i][0])
+    bot.send_message(chat_id=ADMIN, text='Бот запущен!')
 
 # Schedule the hourly job to run every hour
 schedule.every(TIMER).hours.do(lambda: check_new_entries(seminars))

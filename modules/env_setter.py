@@ -14,8 +14,15 @@ def load_env():
     RATE       = os.getenv("rate_limit")
     SILENT_SRT = os.getenv("silent_start")
 
-    return BOT_TOKEN, CHAT_ID, ADMIN_ID, string_to_number_list(MODERATORS), int(TIMER), float(RATE), bool(SILENT_SRT)
+    return BOT_TOKEN, CHAT_ID, ADMIN_ID, string_to_number_list(MODERATORS), int(TIMER), float(RATE), str_to_bool(SILENT_SRT)
 
+def str_to_bool(envar):
+    if envar == 'True':
+        return True
+    elif envar == 'False':
+        return False
+    else:
+        return None
 
 def string_to_number_list(input_string):
 

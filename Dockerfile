@@ -41,7 +41,7 @@ ENV chat_id    = 'changeme'
 ENV admin_id   = 'changeme'
 ENV timer      = 1
 ENV rate_limit = 3
-ENV rate_limit = False
+ENV silent_start = False
 
 # Set the working directory in the container
 WORKDIR /app

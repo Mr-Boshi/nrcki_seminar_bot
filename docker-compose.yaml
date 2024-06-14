@@ -13,4 +13,4 @@ services:
           - rate_limit=0.5
           - silent_start=True
 
-        image: docker.io/library/seminar_bot:0.6.5
+        image: docker.io/library/seminar_bot:0.7
