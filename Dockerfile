@@ -1,6 +1,9 @@
 # Use an official Python runtime as a base image
 FROM python:3.9-slim
 
+ENV TZ="Europe/Moscow"
+RUN date
+
 # Set working directory
 WORKDIR /app
 

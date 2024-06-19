@@ -6,7 +6,7 @@ import os
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from dotenv import load_dotenv
-from modules import get_all_news, load_env, RateLimiter, pagagraphs_md
+from modules import get_all_news, load_env, RateLimiter, pagagraphs_md, create_browser
 from threading import Thread
 
 
@@ -271,7 +271,7 @@ def update_news():
 
     # Fetch news if the file is older than 1 hour or doesn't exist
     if time_diff_hours >= 0.75:
-        news = get_all_news()
+        news = get_all_news(browser)
         with open(filepath, "w") as json_file:
             json.dump(news, json_file)
 
@@ -284,7 +284,9 @@ def load_news():
 
 def check_new_entries():
     if not os.path.exists(filepath):
+        print('News file not found, loading news.')
         update_news()
+        return
 
     old_news = load_news()
     update_news()
@@ -334,9 +336,11 @@ def load_subscribtions():
 # Preparation before main loop
 # ==============================================================================
 # ==============================================================================
+browser = create_browser()
 subscriptions = load_subscribtions()
 check_new_entries()
-print(SILENT_SRT)
+
+
 if not SILENT_SRT:
     bot.send_message(chat_id=ADMIN, text="Бот запущен!")
 

@@ -15,6 +15,7 @@ def create_browser():
 
     # Initialize the Chrome driver with headless option
     browser = webdriver.Chrome(options=chrome_options)
+    print('Browser created')
     return browser
 
 
@@ -165,9 +166,11 @@ def pagagraphs_md(paragraph):
 
 
 # Main function to check for updates and send notifications
-def get_all_news():
+def get_all_news(browser = None):
     # Getting the URL of the webpage with seminars
-    browser = create_browser()
+    if browser is None:
+        browser = create_browser()
+
     urls = seminar_link_finder(browser)
 
     news = []
