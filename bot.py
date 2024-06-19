@@ -98,9 +98,11 @@ def handle_find(message):
 def handle_notify(message):
     user_id = message.from_user.id
     # Set the state for the user
-    if user_id in MODERATORS + [ADMIN]:
+    if user_id in MODERATORS + [str(ADMIN)]:
         user_states[user_id] = "waiting_for_message"
         bot.reply_to(message, "Пожалуйста, отправьте сообщение для пересылки в чат.")
+    else:
+        bot.reply_to(message, f'Для этого нужно быть модератором или администратором бота.')
 
 
 # Handling '/subscribe' request
@@ -128,6 +130,34 @@ def handle_unsubscribe(message):
         with open(subsfile, "w") as json_file:
             json.dump(subscriptions, json_file)
 
+
+
+# Handling '/update' request
+# ==============================================================================
+@bot.message_handler(commands=["update"])
+def handle_force_update(message):
+    user_id = message.from_user.id
+    if user_id == ADMIN:
+        bot.reply_to(message, text='Есть, босс!')
+        check_new_entries('outdated')
+    else:
+        bot.reply_to(message, text=f'Для этого нужно быть админом бота.')
+
+# Handling '/list_subs' request
+# ==============================================================================
+@bot.message_handler(commands=["list_subs"])
+def handle_list_subs(message):
+    user_id = message.from_user.id
+    chat_id = message.chat.id
+    if subscriptions == []:
+        text = 'No subscriptions.'
+    else:
+        text = ', '.join(str(x) for x in subscriptions) + '.'
+
+    if user_id == ADMIN:
+        bot.reply_to(message, text=text)
+    else:
+        bot.reply_to(message, text='Для этого нужно быть админом бота.')
 
 # Handling find-messages and forward-messages
 # ==============================================================================
@@ -257,23 +287,18 @@ def send_news_for_seminar(chat_id, seminar_index, founds, news, info_text=None):
 # ==============================================================================
 # ==============================================================================
 
+def check_news_file_status():
+    if not os.path.exists(filepath):
+        return 'absent'
+    elif (time.time() - os.path.getmtime(filepath)) / 3600 >= 0.75 * TIMER:
+        return 'outdated'
+    else:
+        return 'updated'
 
 def update_news():
-    # Calculate the time difference in hours if the file exists
-    if os.path.exists(filepath):
-        last_modified_time = os.path.getmtime(filepath)
-        current_time = time.time()
-        time_diff_hours = (current_time - last_modified_time) / 3600
-    else:
-        time_diff_hours = float(
-            "inf"
-        )  # Use infinity to ensure news is fetched if file doesn't exist
-
-    # Fetch news if the file is older than 1 hour or doesn't exist
-    if time_diff_hours >= 0.75:
-        news = get_all_news(browser)
-        with open(filepath, "w") as json_file:
-            json.dump(news, json_file)
+    news = get_all_news(browser)
+    with open(filepath, "w") as json_file:
+        json.dump(news, json_file)
 
 
 def load_news():
@@ -282,44 +307,48 @@ def load_news():
     return news
 
 
-def check_new_entries():
-    if not os.path.exists(filepath):
+def check_new_entries(file_status = None):
+    if file_status is None:
+        file_status = check_news_file_status()
+
+    if file_status == 'absent':
         print('News file not found, loading news.')
         update_news()
         return
 
-    old_news = load_news()
-    update_news()
-    new_news = load_news()
+    elif file_status == 'outdated':
+        old_news = load_news()
+        update_news()
+        new_news = load_news()
 
-    for i in range(len(seminars)):
-        old_news_seminar = old_news[i]
-        new_news_seminar = new_news[i]
+        for i in range(len(seminars)):
+            old_news_seminar = old_news[i]
+            new_news_seminar = new_news[i]
 
-        new_entries = len(new_news_seminar) - len(old_news_seminar)
-        chats = [CHAT] + subscriptions
-        if new_entries == 1:
-            for chat in chats:
-                info_text = f"Внимание! Новый семинар. {seminars[i]}"
-                send_news_for_seminar(chat, i, 0, new_news_seminar, info_text)
-        elif new_entries > 1:
-            for chat in chats:
+            new_entries = len(new_news_seminar) - len(old_news_seminar)
+            chats = [CHAT] + subscriptions
+            if new_entries == 1:
+                for chat in chats:
+                    info_text = f"Внимание! Новый семинар. {seminars[i]}"
+                    send_news_for_seminar(chat, i, 0, new_news_seminar, info_text)
+            elif new_entries > 1:
+                for chat in chats:
+                    bot.send_message(
+                        chat_id=chat,
+                        text=f"Внимание! Объявлено {new_entries} новых семинаров."
+                        + " "
+                        + seminars[i],
+                    )
+                    for j in range(new_entries, 0, -1):
+                        send_news_for_seminar(chat, i, j - 1, new_news_seminar)
+
+            elif new_entries < 0:
                 bot.send_message(
-                    chat_id=chat,
-                    text=f"Внимание! Объявлено {new_entries} новых семинаров."
-                    + " "
-                    + seminars[i],
+                    chat_id=ADMIN, text="Number of entries got LOWER. Something is WRONG."
                 )
-                for j in range(new_entries, 0, -1):
-                    send_news_for_seminar(chat, i, j - 1, new_news_seminar)
-
-        elif new_entries < 0:
-            bot.send_message(
-                chat_id=ADMIN, text="Number of entries got LOWER. Something is WRONG."
-            )
-        # for debugging
-        # else:
-        #     bot.send_message(chat_id=CHAT, text='Nothing new, working good')
+            # for debugging
+            # else:
+            #     bot.send_message(chat_id=CHAT, text='Nothing new, working good')
 
 
 # Loading list of subscribed users:
@@ -353,7 +382,7 @@ schedule.every(TIMER).hours.do(lambda: check_new_entries(seminars))
 
 # Main loop to run the scheduler
 def run_bot():
-    bot.infinity_polling()
+    bot.infinity_polling(timeout = 10, long_polling_timeout = 5)
 
 
 def run_schedule():

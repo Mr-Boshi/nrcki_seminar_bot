@@ -15,4 +15,4 @@ services:
         volumes:
             # - ./:/app/news
             - /etc/localtime:/etc/localtime:ro
-        image: docker.io/library/seminar_bot:0.7.1
+        image: docker.io/library/seminar_bot:0.7.9

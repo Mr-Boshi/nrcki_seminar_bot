@@ -17,8 +17,8 @@ def load_env():
 
     return (
         BOT_TOKEN,
-        CHAT_ID,
-        ADMIN_ID,
+        int(CHAT_ID),
+        int(ADMIN_ID),
         string_to_number_list(MODERATORS),
         int(TIMER),
         float(RATE),

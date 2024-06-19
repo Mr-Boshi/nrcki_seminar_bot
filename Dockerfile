@@ -1,9 +1,6 @@
 # Use an official Python runtime as a base image
 FROM python:3.9-slim
 
-ENV TZ="Europe/Moscow"
-RUN date
-
 # Set working directory
 WORKDIR /app
 
@@ -45,6 +42,9 @@ ENV admin_id   = 'changeme'
 ENV timer      = 1
 ENV rate_limit = 3
 ENV silent_start = False
+
+RUN echo "Europe/Moscow" > /etc/timezone
+RUN dpkg-reconfigure -f noninteractive tzdata
 
 # Set the working directory in the container
 WORKDIR /app
