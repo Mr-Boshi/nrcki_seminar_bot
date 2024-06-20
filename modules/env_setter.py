@@ -14,6 +14,9 @@ def load_env():
     TIMER = os.getenv("timer")
     RATE = os.getenv("rate_limit")
     SILENT_SRT = os.getenv("silent_start")
+    ssl_sert=os.getenv("ssl_sert")
+    ssl_privkey=os.getenv("ssl_privkey")
+    webhook_port=os.getenv("webhook_port")
 
     return (
         BOT_TOKEN,
@@ -23,6 +26,9 @@ def load_env():
         int(TIMER),
         float(RATE),
         str_to_bool(SILENT_SRT),
+        ssl_sert,
+        ssl_privkey,
+        int(webhook_port)
     )
 
 

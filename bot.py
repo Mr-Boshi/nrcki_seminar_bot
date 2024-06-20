@@ -4,6 +4,8 @@ import time
 import json
 import os
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiohttp import web
+import ssl
 
 from dotenv import load_dotenv
 from modules import get_all_news, load_env, RateLimiter, pagagraphs_md, create_browser
@@ -12,7 +14,15 @@ from threading import Thread
 
 # Load environment variables from the .env file
 load_dotenv()
-BOT_TOKEN, CHAT, ADMIN, MODERATORS, TIMER, RATE, SILENT_SRT = load_env()
+BOT_TOKEN, CHAT, ADMIN, MODERATORS, TIMER, RATE, SILENT_SRT, SSL_CERT, SSL_PRIVKEY, PORT = load_env()
+
+WEBHOOK_SSL_CERT = SSL_CERT
+WEBHOOK_SSL_PRIV = SSL_PRIVKEY
+WEBHOOK_PORT = PORT
+
+print(os.path.exists(WEBHOOK_SSL_CERT))
+print(os.path.exists(WEBHOOK_SSL_PRIV))
+print(WEBHOOK_PORT)
 
 seminars = [
     "Отдел Т: Эксперименты на токамаках",
@@ -275,6 +285,8 @@ def send_news_for_seminar(chat_id, seminar_index, founds, news, info_text=None):
     if founds:
         if info_text:
             bot.send_message(chat_id, info_text)
+        if isinstance(founds, int):
+            founds
         for index in founds:
             while not limiter.ready():
                 time.sleep(0.5)
@@ -339,8 +351,7 @@ def check_new_entries(file_status = None):
                         + " "
                         + seminars[i],
                     )
-                    for j in range(new_entries, 0, -1):
-                        send_news_for_seminar(chat, i, j - 1, new_news_seminar)
+                    send_news_for_seminar(chat, i, new_entries, new_news_seminar)
 
             elif new_entries < 0:
                 bot.send_message(

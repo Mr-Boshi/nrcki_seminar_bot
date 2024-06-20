@@ -42,6 +42,9 @@ ENV admin_id   = 'changeme'
 ENV timer      = 1
 ENV rate_limit = 3
 ENV silent_start = False
+ENV ssl_sert='changeme'
+ENV ssl_privkey='changeme'
+ENV webhook_port='8080'
 
 RUN echo "Europe/Moscow" > /etc/timezone
 RUN dpkg-reconfigure -f noninteractive tzdata
