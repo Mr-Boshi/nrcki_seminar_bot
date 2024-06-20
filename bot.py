@@ -6,6 +6,7 @@ import os
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiohttp import web
 import ssl
+import asyncio
 
 from dotenv import load_dotenv
 from modules import get_all_news, load_env, RateLimiter, pagagraphs_md, create_browser
@@ -13,17 +14,15 @@ from threading import Thread
 
 
 # Load environment variables from the .env file
-load_dotenv()
 BOT_TOKEN, CHAT, ADMIN, MODERATORS, TIMER, RATE, SILENT_SRT, SSL_CERT, SSL_PRIVKEY, PORT = load_env()
 
+# Setup webhook parameters
+WEBHOOK_LISTEN = "0.0.0.0"
 WEBHOOK_SSL_CERT = SSL_CERT
 WEBHOOK_SSL_PRIV = SSL_PRIVKEY
 WEBHOOK_PORT = PORT
 
-print(os.path.exists(WEBHOOK_SSL_CERT))
-print(os.path.exists(WEBHOOK_SSL_PRIV))
-print(WEBHOOK_PORT)
-
+#Setup seminar names and keyboard options
 seminars = [
     "Отдел Т: Эксперименты на токамаках",
     "Инженерно-физические проблемы термоядерных реакторов",
@@ -31,17 +30,43 @@ seminars = [
     "Инженерно-физический семинар по токамакам",
 ]
 keybord_options = seminars + ["Все!"]
-# Dir name and file name are static so there is no need to forward them to any functions
+
+# Setting up the names of files to store news and subscriptions. Dir name and file names are static so there is no need to forward them to any functions
 filedir = "news"
 os.makedirs(filedir, exist_ok=True)
 filepath = os.path.join(filedir, "news.json")
 subsfile = os.path.join(filedir, "subscribtions.json")
 
-# Create the bot and some sotrage variables
+# Create the bot and some storage variables
 limiter = RateLimiter(1 / RATE)
 user_states = {}
 subscriptions = []
 bot = telebot.TeleBot(BOT_TOKEN)
+
+#Create app for webkook handling
+app = web.Application()
+
+# process only requests with correct bot token
+async def handle(request):
+    if request.match_info.get("token") == bot.token:
+        request_body_dict = await request.json()
+        update = telebot.types.Update.de_json(request_body_dict)
+        bot.process_new_updates([update])
+        return web.Response()
+    else:
+        return web.Response(status=403)
+    
+async def check_site_for_updates():
+    while True:
+        check_new_entries()
+        await asyncio.sleep(TIMER * 3600)
+
+async def start_background_tasks(app):
+    app['check_site_for_updates'] = asyncio.create_task(check_site_for_updates())
+
+async def cleanup_background_tasks(app):
+    app['check_site_for_updates'].cancel()
+    await app['check_site_for_updates']
 
 
 # Handling greetings
@@ -357,9 +382,9 @@ def check_new_entries(file_status = None):
                 bot.send_message(
                     chat_id=ADMIN, text="Number of entries got LOWER. Something is WRONG."
                 )
-            # for debugging
+            # # for debugging
             # else:
-            #     bot.send_message(chat_id=CHAT, text='Nothing new, working good')
+            #     bot.send_message(chat_id=ADMIN, text='Nothing new, working good')
 
 
 # Loading list of subscribed users:
@@ -376,35 +401,27 @@ def load_subscribtions():
 # Preparation before main loop
 # ==============================================================================
 # ==============================================================================
+app.router.add_post("/{token}/", handle)
+
+context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+context.load_cert_chain(WEBHOOK_SSL_CERT, WEBHOOK_SSL_PRIV)
+
 browser = create_browser()
 subscriptions = load_subscribtions()
-check_new_entries()
-
 
 if not SILENT_SRT:
     bot.send_message(chat_id=ADMIN, text="Бот запущен!")
 
-# Schedule the hourly job to run every hour
-schedule.every(TIMER).hours.do(lambda: check_new_entries(seminars))
 
+# Main loop
 # ==============================================================================
 # ==============================================================================
+app.on_startup.append(start_background_tasks)
+app.on_cleanup.append(cleanup_background_tasks)
 
-
-# Main loop to run the scheduler
-def run_bot():
-    bot.infinity_polling(timeout = 10, long_polling_timeout = 5)
-
-
-def run_schedule():
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
-
-
-# ==============================================================================
-# ==============================================================================
-
-if __name__ == "__main__":
-    Thread(target=run_bot).start()
-    Thread(target=run_schedule).start()
+web.run_app(
+    app,
+    host=WEBHOOK_LISTEN,
+    port=WEBHOOK_PORT,
+    ssl_context=context,
+)

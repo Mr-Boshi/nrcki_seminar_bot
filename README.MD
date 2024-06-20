@@ -44,6 +44,8 @@ docker compose up -d
 *  `silent_start` - выключает приветственно сообщение бота, которое отправляется при его запуске. Должно быть True или False, по умолчанию False
 
 ## TO-DO
-* Error handling
-* Better search
-* Fetch News from the main page
+- [x] Implement Webhooks instead of polling
+- [ ] Run headless browser only if needed
+- [ ] Error handling
+- [ ] Better search
+- [ ] Fetch News from the main page

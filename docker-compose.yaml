@@ -5,14 +5,20 @@ services:
         logging:
             options:
                 max-size: 1m
+        ports:
+          - 8443:8443
         environment:
           - bot_token=CHANGEME
           - chat_id=CHANGEME
           - admin_id=CHANGEME
-          - timer=1
-          - rate_limit=0.5
-          - silent_start=True
+          - moderators_id=CHANGEME
+          - ssl_sert=/app/cert/live/npm-14/fullchain.pem
+          - ssl_privkey=/app/cert/live/npm-14/privkey.pem
+          - webhook_port=8443
+          # - timer=1
+          # - rate_limit=0.5
+          # - silent_start=True
         volumes:
             # - ./:/app/news
-            - /etc/localtime:/etc/localtime:ro
-        image: docker.io/library/seminar_bot:0.7.9
+            # - ./letsencrypt:/app/cert:ro
+        image: docker.io/library/seminar_bot:0.8.1
