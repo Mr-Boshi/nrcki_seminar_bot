@@ -52,13 +52,15 @@ RUN dpkg-reconfigure -f noninteractive tzdata
 # Set the working directory in the container
 WORKDIR /app
 RUN mkdir /modules
-RUN mkdir /news
+RUN mkdir /bot
+RUN mkdir /data
 
 # Copy the Python requirements file
 COPY requirements.txt .
-COPY bot.py .
+COPY main.py .
 COPY __init__.py .
 COPY modules modules
+COPY bot bot
 COPY set_env.sh set_env.sh
 
 # Run the script to generate the .env file
@@ -69,4 +71,4 @@ RUN sh set_env.sh
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Run the bot script when the container launches
-CMD ["python", "bot.py"]
+CMD ["python", "main.py"]

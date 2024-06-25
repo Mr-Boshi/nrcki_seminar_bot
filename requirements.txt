@@ -2,5 +2,4 @@ python-dotenv
 beautifulsoup4
 selenium
 pyTelegramBotAPI
-schedule
 aiohttp

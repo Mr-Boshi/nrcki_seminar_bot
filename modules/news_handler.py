@@ -1,7 +1,9 @@
 from bs4 import BeautifulSoup
 import re
+import os
 from selenium.webdriver.chrome.options import Options
 from selenium import webdriver
+from modules.common import dump_json, load_json
 
 
 # This is so  we would not create browsers every time we want to get a page
@@ -16,22 +18,28 @@ def create_browser():
     # Initialize the Chrome driver with headless option
     browser = webdriver.Chrome(options=chrome_options)
     print('Browser created')
+    
     return browser
 
 
 # Getting the content of the page with predefined browser and returning the pretty soup
 def page_loader(browser, url):
-    browser.get(url)
-    page_content = browser.page_source
-    # Create a BeautifulSoup object
-    return BeautifulSoup(page_content, "html.parser")
+    try:
+        browser.get(url)
+        page_content = browser.page_source
+        # Create a BeautifulSoup object
+        return BeautifulSoup(page_content, "html.parser")
+    except Exception as ex:
+        print(f"Error getting seminars: {ex}")
+        return None
+
 
 
 # This thing looks for a link with a keyed str in href
 def link_finder(browser, text: str, url="http://nrcki.ru"):
     page_soup = page_loader(browser, url)
     for link in page_soup.find_all("a", href=True):
-        if text in link.text:
+        if text == link.text:
             print(f'Link to "{text}" found: {link.get("href")}')
             return link.get("href")
 
@@ -40,14 +48,14 @@ def link_finder(browser, text: str, url="http://nrcki.ru"):
 
 
 # This thing finds the links to seminars pages. Didn't want to hardcode them in case they change
-def seminar_link_finder(browser=None):
+def seminar_link_finder(browser=None, link_file = None):
     base_url = "http://nrcki.ru"
     all_seminars_key = "Семинары"
     pages_of_interest = [
-        "Эксперименты на токамаках",
-        "Инженерно-физические проблемы термоядерных реакторов",
-        "Теория магнитного удержания плазмы",
-        "Инженерно-физический семинар по токамакам",
+        'Семинар "Т". Эксперименты на токамаках',
+        'Семинар "Инженерно-физические проблемы термоядерных реакторов"',
+        'Семинар "Теория магнитного удержания плазмы"',
+        'Инженерно-физический семинар по токамакам',
     ]
 
     if browser is None:
@@ -59,6 +67,9 @@ def seminar_link_finder(browser=None):
         seminar_pages.append(
             base_url + link_finder(browser, enrty, base_url + all_seminars_page)
         )
+    if link_file:
+        dump_json(seminar_pages, link_file)
+
     return seminar_pages
 
 
@@ -164,18 +175,31 @@ def pagagraphs_md(paragraph):
 
     return wrapped_text
 
-
-# Main function to check for updates and send notifications
-def get_all_news(browser = None):
+# Getting news
+def get_all_news(browser = None, links_file = None):
     # Getting the URL of the webpage with seminars
     if browser is None:
         browser = create_browser()
-
-    urls = seminar_link_finder(browser)
+ 
+    if links_file:
+        if os.path.exists(links_file):
+            urls = load_json(links_file)
+        else:
+            urls = seminar_link_finder(browser, links_file)
 
     news = []
     for url in urls:
         page_soup = page_loader(browser, url)
-        news.append(parse_seminars_soup(page_soup))
+        if page_soup:
+            news.append(parse_seminars_soup(page_soup))
+        else:
+            news.append([])
 
     return news
+
+# Updating news
+def update_news(filepath, link_file = None):
+    browser = create_browser()
+    news = get_all_news(browser, link_file)
+    dump_json(news, filepath)
+
