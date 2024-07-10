@@ -2,6 +2,7 @@ from aiohttp import web
 import ssl
 import telebot
 import asyncio
+import random
 from modules.env_setter import load_env
 from bot.common import check_new_entries
 
@@ -42,7 +43,8 @@ async def handle(request):
 async def check_site_for_updates():
     while True:
         check_new_entries(config, bot, limiter)
-        await asyncio.sleep(TIMER * 3600)
+        random_shifter = random.randint(15, 300)
+        await asyncio.sleep(TIMER * 3600 + random_shifter)
 
 async def start_background_tasks(app):
     app['check_site_for_updates'] = asyncio.create_task(check_site_for_updates())

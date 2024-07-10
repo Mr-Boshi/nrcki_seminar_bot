@@ -43,11 +43,16 @@ def command_extractor(text):
 ## =============================================================================
 # Handle simple commands: /hello, /subscribe, /unsubscribe, /list_subs, /update
 def echo_simple_commands(bot: TeleBot, limiter, config):
-    @bot.message_handler(commands=["start", "hello", "subscribe", "unsubscribe", "list_subs", "update"])
+    @bot.message_handler(commands=["start", "hello", "subscribe", "unsubscribe", "list_subs", "update", "backup"])
     def simple_commands(message):
         subs_file = config['subs_file']
+        news_file = config['news_file']
+        links_file = config['links_file']
         command, _ = command_extractor(message.text)
         subscriptions = load_json(subs_file)
+
+        user_id = message.from_user.id
+        chat_id = message.chat.id
 
         # Handle greetengs
         if command in ['start', 'hello']:
@@ -59,7 +64,6 @@ def echo_simple_commands(bot: TeleBot, limiter, config):
             bot.reply_to(message, text)
 
         elif command == 'subscribe':
-            user_id = message.from_user.id
             bot.reply_to(message, "Вы были успешно добавлены в список рассылки")
             # Set the state for the user
             if user_id not in subscriptions:
@@ -67,7 +71,6 @@ def echo_simple_commands(bot: TeleBot, limiter, config):
                 dump_json(subscriptions, subs_file)
 
         elif command == 'unsubscribe':
-            user_id = message.from_user.id
             bot.reply_to(message, "Больше уведомления вам приходить не будут")
             # Set the state for the user
             if user_id in subscriptions:
@@ -75,7 +78,6 @@ def echo_simple_commands(bot: TeleBot, limiter, config):
                 dump_json(subscriptions, subs_file)
         
         elif command == 'list_subs':
-            user_id = message.from_user.id
             if subscriptions == []:
                 text = "No subscriptions."
             else:
@@ -87,7 +89,6 @@ def echo_simple_commands(bot: TeleBot, limiter, config):
                 bot.reply_to(message, text="Для этого нужно быть админом бота.")
 
         elif command == 'update':
-            user_id = message.from_user.id
             if user_id == ADMIN:
                 reply = bot.reply_to(message, text="Есть, босс!")
  
@@ -97,6 +98,17 @@ def echo_simple_commands(bot: TeleBot, limiter, config):
                 bot.reply_to(message, text="Сделано, босс!")
             else:
                 bot.reply_to(message, text="Для этого нужно быть админом бота.")
+
+        elif command == 'backup':
+            if user_id == ADMIN:
+                file_paths = [news_file, subs_file, links_file]
+                for file in file_paths:
+                    with open(file, 'rb') as file:
+                        try:
+                            bot.send_document(chat_id, file)
+                        except Exception as _:
+                            bot.send_message(chat_id, text="Ошибка при отправке файла.")
+
 
 
 # Handle commands that require a keyboard: /last, /find
