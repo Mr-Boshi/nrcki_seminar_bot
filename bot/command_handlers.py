@@ -1,12 +1,16 @@
-from telebot import TeleBot
 import time
+import os
+from telebot import TeleBot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-from modules.env_setter import load_env
-from modules.common import load_json, dump_json, find_matching_indexes
+from modules.common import load_json, dump_json, find_matching_indexes, string_to_number_list
 from bot.common import check_new_entries, send_entries_from_one_seminar, send_entries_from_all_seminars
 
 # Load environment variables from the .env file
-_, CHAT, ADMIN, MODERATORS, TIMER, RATE, _, _, _, _ = load_env()
+CHAT       = int(os.getenv('chat_id'))
+ADMIN      = int(os.getenv('admin_id'))
+MODERATORS = string_to_number_list(os.getenv('moderators_id'))
+TIMER      = int(os.getenv('timer'))
+RATE       = float(os.getenv('rate_limit'))
 
 ## Some general purpose functions
 # ==============================================================================

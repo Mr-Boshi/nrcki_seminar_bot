@@ -1,11 +1,15 @@
 from aiohttp import web
+import os
 import ssl
 import telebot
 import asyncio
-from modules.env_setter import load_env
 from bot.common import check_new_entries
 
-BOT_TOKEN, _, _, _, TIMER, _, _, SSL_CERT, SSL_PRIVKEY, _ = load_env()
+# Load environment variables from the .env file
+BOT_TOKEN = os.getenv('bot_token')
+TIMER = int(os.getenv('timer'))
+SSL_CERT = os.getenv('ssl_sert')
+SSL_PRIVKEY = os.getenv('ssl_privkey')
 
 def setup_web_app(bot_instance, config_dict, limiter_obj):
     global bot, config, limiter

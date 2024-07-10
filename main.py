@@ -1,14 +1,21 @@
 import telebot
 import os
 from aiohttp import web
+from dotenv import load_dotenv
 from bot.bot import setup_handlers
 from bot.rate_limiter import RateLimiter
-from modules.env_setter import load_env
+from modules.common import str_to_bool
 from modules.webhook_handler import setup_web_app
 from modules.news_handler import seminar_link_finder
 
 # Load environment variables from the .env file
-BOT_TOKEN, _, ADMIN, _, _, RATE, SILENT_SRT, _, _, PORT = load_env()
+load_dotenv()
+
+BOT_TOKEN = os.getenv('bot_token')
+ADMIN = int(os.getenv('admin_id'))
+RATE = float(os.getenv('rate_limit'))
+SILENT_SRT = str_to_bool(os.getenv('silent_start'))
+PORT = int(os.getenv('webhook_port'))
 
 # Setup webhook parameters
 WEBHOOK_LISTEN = "0.0.0.0"

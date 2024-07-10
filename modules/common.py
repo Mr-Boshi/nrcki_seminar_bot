@@ -1,9 +1,9 @@
 import os
 import time
 import json
-from modules.env_setter import load_env
 
-_, _, _, _, TIMER, _, _, _, _, _ = load_env()
+# Load environment variables from the .env file
+TIMER = int(os.getenv('timer'))
 
 # Check file status
 def check_news_file_status(filepath):
@@ -26,7 +26,7 @@ def load_json(file, type = 'list'):
         elif type == 'dict':
             return {}
 
-# Searching in news
+# Saving a variable to json file
 def dump_json(var, file):
     with open(file, "w") as json_file:
         json.dump(var, json_file)
@@ -47,3 +47,33 @@ def find_matching_indexes(all_news, prompt):
                 matching_indexes[ind].append(index)
 
         return matching_indexes
+    
+# Converting a variable 'True' or 'False' to bool
+def str_to_bool(envar):
+    if envar == "True":
+        return True
+    elif envar == "False":
+        return False
+    else:
+        return None
+
+# Converting a string to list of integers
+def string_to_number_list(input_string):
+    number_strings = [num.strip() for num in input_string.split(",")]
+
+    # Convert the list of strings to a list of numbers (integers or floats)
+    number_list = []
+    for num_str in number_strings:
+        try:
+            # Try to convert to integer
+            number = int(num_str)
+        except ValueError:
+            try:
+                # If it fails, try to convert to float
+                number = float(num_str)
+            except ValueError:
+                # If it fails again, skip the value (or handle it as needed)
+                continue
+        number_list.append(number)
+
+    return number_list

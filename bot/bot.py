@@ -1,5 +1,4 @@
-from modules.env_setter import load_env
-
+import os
 from bot.command_handlers import (
     echo_simple_commands,
     echo_last_find,
@@ -10,7 +9,10 @@ from bot.command_handlers import (
 
 
 # Load environment variables from the .env file
-_, CHAT, ADMIN, _, TIMER, RATE, _, _, _, _ = load_env()
+CHAT  = int(os.getenv('chat_id'))
+ADMIN = int(os.getenv('admin_id'))
+RATE  = float(os.getenv('rate_limit'))
+TIMER = int(os.getenv('timer'))
 
 ## Setting bot handlers
 # ==============================================================================
