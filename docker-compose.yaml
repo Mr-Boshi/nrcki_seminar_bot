@@ -1,6 +1,9 @@
 services:
   seminar-bot:
         container_name: seminar-bot
+        build:
+          context: .
+          dockerfile: Dockerfile
         restart: unless-stopped
         logging:
             options:
@@ -21,4 +24,4 @@ services:
         volumes:
             # - ./:/app/news
             # - ./letsencrypt:/app/cert:ro
-        image: docker.io/library/seminar_bot:0.8.1
+        image: seminar_bot:0.9.0

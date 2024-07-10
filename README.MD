@@ -35,6 +35,8 @@ python main.py
 ### Docker
 Для того, чтоб запустить бота в Docker создайте файл с названием docker-compose.yaml и поместите в него содержимое одноименного файла из репозитория. Заполните переменные среды и выполните команду
 ```
+git clone https://github.com/Mr-Boshi/nrcki_seminar_bot.git
+cd nrcki_seminar_bot
 docker compose up -d
 ```
 
@@ -57,4 +59,5 @@ docker compose up -d
 - [ ] Run headless browser only if needed
 - [ ] Error handling
 - [x] Better search
+- [ ] Backups for subscriptions and news.
 - [ ] Fetch News from the main page
