@@ -45,6 +45,7 @@ ENV silent_start = False
 ENV ssl_sert='changeme'
 ENV ssl_privkey='changeme'
 ENV webhook_port='8080'
+ENV IN_DOCKER=1
 
 RUN echo "Europe/Moscow" > /etc/timezone
 RUN dpkg-reconfigure -f noninteractive tzdata
@@ -61,11 +62,6 @@ COPY main.py .
 COPY __init__.py .
 COPY modules modules
 COPY bot bot
-COPY set_env.sh set_env.sh
-
-# Run the script to generate the .env file
-RUN chmod +x set_env.sh
-RUN sh set_env.sh
 
 # Install any needed dependencies specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt

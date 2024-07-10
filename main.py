@@ -9,7 +9,8 @@ from modules.webhook_handler import setup_web_app
 from modules.news_handler import seminar_link_finder
 
 # Load environment variables from the .env file
-load_dotenv()
+if not os.getenv('IN_DOCKER'):
+    load_dotenv()
 
 BOT_TOKEN = os.getenv('bot_token')
 ADMIN = int(os.getenv('admin_id'))
