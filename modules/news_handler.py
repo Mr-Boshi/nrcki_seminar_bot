@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import re
 import os
+import requests
 from selenium.webdriver.chrome.options import Options
 from selenium import webdriver
 from modules.common import dump_json, load_json
@@ -21,9 +22,19 @@ def create_browser():
     
     return browser
 
+def static_page_loader(url):
+    response = requests.get(url)
+
+    # Check if the request was successful (status code 200)
+    if response.status_code == 200:
+        return  BeautifulSoup(response.content, "html.parser")
+    else:
+        print(f"Error getting seminars: {response.status_code}")
+        return None
+
 
 # Getting the content of the page with predefined browser and returning the pretty soup
-def page_loader(browser, url):
+def browser_page_loader(browser, url):
     try:
         browser.get(url)
         page_content = browser.page_source
@@ -37,7 +48,7 @@ def page_loader(browser, url):
 
 # This thing looks for a link with a keyed str in href
 def link_finder(browser, text: str, url="http://nrcki.ru"):
-    page_soup = page_loader(browser, url)
+    page_soup = browser_page_loader(browser, url)
     for link in page_soup.find_all("a", href=True):
         if text == link.text:
             print(f'Link to "{text}" found: {link.get("href")}')
@@ -189,7 +200,7 @@ def get_all_news(browser = None, links_file = None):
 
     news = []
     for url in urls:
-        page_soup = page_loader(browser, url)
+        page_soup = static_page_loader(browser, url)
         if page_soup:
             news.append(parse_seminars_soup(page_soup))
         else:
