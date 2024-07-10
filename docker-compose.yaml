@@ -5,12 +5,20 @@ services:
         logging:
             options:
                 max-size: 1m
+        ports:
+          - 8080:8080
         environment:
           - bot_token=CHANGEME
           - chat_id=CHANGEME
           - admin_id=CHANGEME
-          - timer=1
-          - rate_limit=0.5
-          - silent_start=True
-
-        image: docker.io/library/seminar_bot:0.6.5
+          - moderators_id=CHANGEME
+          - ssl_sert=/app/cert/fullchain.pem
+          - ssl_privkey=/app/privkey.pem
+          - webhook_port=8080
+          # - timer=1
+          # - rate_limit=0.5
+          # - silent_start=True
+        volumes:
+            # - ./:/app/news
+            # - ./letsencrypt:/app/cert:ro
+        image: docker.io/library/seminar_bot:0.8.1
