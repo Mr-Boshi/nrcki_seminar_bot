@@ -1,11 +1,13 @@
+import os
 import time
-
-from modules.env_setter import load_env
 from modules.news_handler import pagagraphs_md, update_news
 from modules.common import check_news_file_status, load_json
 
-_, CHAT, ADMIN, _, TIMER, RATE, _, _, _, _ = load_env()
-
+# Load environment variables from the .env file
+CHAT  = int(os.getenv('chat_id'))
+ADMIN = int(os.getenv('admin_id'))
+RATE  = float(os.getenv('rate_limit'))
+TIMER = int(os.getenv('timer'))
 
 ## Some general purpose functions
 # ==============================================================================

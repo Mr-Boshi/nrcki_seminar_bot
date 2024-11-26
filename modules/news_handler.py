@@ -58,6 +58,8 @@ def seminar_link_finder(browser=None, link_file = None):
         'Инженерно-физический семинар по токамакам',
     ]
 
+    print('Looking for links to seminars')
+
     if browser is None:
         browser = create_browser()
 
@@ -69,6 +71,7 @@ def seminar_link_finder(browser=None, link_file = None):
         )
     if link_file:
         dump_json(seminar_pages, link_file)
+        print('Links saved to file}')
 
     return seminar_pages
 

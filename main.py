@@ -1,18 +1,31 @@
-import telebot
 import os
-from aiohttp import web
-from bot.bot import setup_handlers
-from bot.rate_limiter import RateLimiter
-from modules.env_setter import load_env
-from modules.webhook_handler import setup_web_app
-from modules.news_handler import seminar_link_finder
+from dotenv import load_dotenv
 
 # Load environment variables from the .env file
-BOT_TOKEN, _, ADMIN, _, _, RATE, SILENT_SRT, _, _, PORT = load_env()
+if not os.getenv('IN_DOCKER'):
+    load_dotenv()
 
-# Setup webhook parameters
-WEBHOOK_LISTEN = "0.0.0.0"
-WEBHOOK_PORT = PORT
+import telebot
+from time import sleep
+from threading import Thread
+from bot.bot import setup_handlers, run_bot
+from bot.common import check_new_entries
+from bot.rate_limiter import RateLimiter
+from modules.common import str_to_bool
+from modules.news_handler import seminar_link_finder
+
+def run_schedule(TIMER):
+    wait_time = TIMER * 3600
+    while True:
+        check_new_entries(config, bot, limiter)
+        sleep(wait_time)
+
+# Load environment variables from the .env file
+BOT_TOKEN = os.getenv('bot_token')
+ADMIN = int(os.getenv('admin_id'))
+RATE = float(os.getenv('rate_limit'))
+SILENT_SRT = str_to_bool(os.getenv('silent_start'))
+TIMER = int(os.getenv('timer'))
 
 # Setting up the names of files to store news and subscriptions.
 filedir = "data"
@@ -59,17 +72,12 @@ if __name__ == "__main__":
     # Remove user states if exist
     if os.path.exists(config['states_file']):
         os.remove(config['states_file'])
-    
-    # Create web app to handle webhooks
-    app, context = setup_web_app(bot, config, limiter)
 
     # Send greeting message
     if not SILENT_SRT:
         bot.send_message(chat_id=ADMIN, text="Бот запущен!")
     
-    web.run_app(
-        app,
-        host=WEBHOOK_LISTEN,
-        port=WEBHOOK_PORT,
-        ssl_context=context,
-    )
+
+    Thread(target=run_bot, args=(bot,)).start()
+    Thread(target=run_schedule, args=(TIMER,)).start()
+
