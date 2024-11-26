@@ -14,10 +14,6 @@
 *  `/update`. Доступна администратору бота, заставляет его запустить поиск новых семинаров вне очереди.
 
 ## Installation
-Бот работает через webhook, поэтому для работы потребуется его настроить. Сделать это можно при помощи http-запроса на следующий адрес:
-
-`https://api.telegram.org/botYOUR-TOKEN/setWebhook?url=https://YOUR.DOMAIN:8443/YOUR-TOKEN/`
-
 Самого бота после этого можно запустить как в среде Python, так и в Docker.
 
 ### Python
@@ -45,9 +41,6 @@ docker compose up -d
 *  `bot_token` - токен бота к которому можно подключиться
 *  `chat_id` - ID чата в который будут автоматически приходить 
 *  `admin_id` - ID администратора которому будут приходить сообщения об оибках (when implemented...)
-*  `ssl_sert` - путь к файлу ssl сертификата fullchain.pem
-*  `ssl_privkey` - путь к файлу ssl сертификата privkey.pem
-*  `webhook_port`- порт по которому настроен webhook, по умолчанию 8080
 
 **Опциональные переменные:**
 *  `timer` - количество часов между проверками обновлений на сайте. 1 - ежечасно, 24 - раз в сутки. Должно быть целым. По умолчанию - 1.
@@ -55,7 +48,6 @@ docker compose up -d
 *  `silent_start` - выключает приветственно сообщение бота, которое отправляется при его запуске. Должно быть True или False, по умолчанию False
 
 ## TO-DO
-- [x] Implement Webhooks instead of polling
 - [ ] Run headless browser only if needed
 - [ ] Error handling
 - [x] Better search
