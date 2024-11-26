@@ -28,5 +28,9 @@ def setup_handlers(bot, config, limiter):
     echo_responces(bot, config, limiter)
 
 def run_bot(bot):
-    bot.infinity_polling()
+    while True:
+        try:
+            bot.infinity_polling()
+        except Exception as e:
+            print(f'Got an error while polling: {e}')
     

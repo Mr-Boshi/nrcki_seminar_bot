@@ -17,8 +17,11 @@ from modules.news_handler import seminar_link_finder
 def run_schedule(TIMER):
     wait_time = TIMER * 3600
     while True:
-        check_new_entries(config, bot, limiter)
-        sleep(wait_time)
+        try:
+            check_new_entries(config, bot, limiter)
+            sleep(wait_time)
+        except Exception as e:
+            print(f'Got error while background news check: {e}')
 
 # Load environment variables from the .env file
 BOT_TOKEN = os.getenv('bot_token')
@@ -80,4 +83,3 @@ if __name__ == "__main__":
 
     Thread(target=run_bot, args=(bot,)).start()
     Thread(target=run_schedule, args=(TIMER,)).start()
-
