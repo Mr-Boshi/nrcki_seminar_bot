@@ -17,8 +17,8 @@ def create_browser():
 
     # Initialize the Chrome driver with headless option
     browser = webdriver.Chrome(options=chrome_options)
-    print('Browser created')
-    
+    print("Browser created")
+
     return browser
 
 
@@ -34,7 +34,6 @@ def page_loader(browser, url):
         return None
 
 
-
 # This thing looks for a link with a keyed str in href
 def link_finder(browser, text: str, url="http://nrcki.ru"):
     page_soup = page_loader(browser, url)
@@ -48,17 +47,17 @@ def link_finder(browser, text: str, url="http://nrcki.ru"):
 
 
 # This thing finds the links to seminars pages. Didn't want to hardcode them in case they change
-def seminar_link_finder(browser=None, link_file = None):
+def seminar_link_finder(browser=None, link_file=None):
     base_url = "http://nrcki.ru"
     all_seminars_key = "Семинары"
     pages_of_interest = [
         'Семинар "Т". Эксперименты на токамаках',
         'Семинар "Инженерно-физические проблемы термоядерных реакторов"',
         'Семинар "Теория магнитного удержания плазмы"',
-        'Инженерно-физический семинар по токамакам',
+        "Инженерно-физический семинар по токамакам",
     ]
 
-    print('Looking for links to seminars')
+    print("Looking for links to seminars")
 
     if browser is None:
         browser = create_browser()
@@ -71,7 +70,7 @@ def seminar_link_finder(browser=None, link_file = None):
         )
     if link_file:
         dump_json(seminar_pages, link_file)
-        print('Links saved to file}')
+        print("Links saved to file.")
 
     return seminar_pages
 
@@ -178,12 +177,13 @@ def pagagraphs_md(paragraph):
 
     return wrapped_text
 
+
 # Getting news
-def get_all_news(browser = None, links_file = None):
+def get_all_news(browser=None, links_file=None):
     # Getting the URL of the webpage with seminars
     if browser is None:
         browser = create_browser()
- 
+
     if links_file:
         if os.path.exists(links_file):
             urls = load_json(links_file)
@@ -200,9 +200,9 @@ def get_all_news(browser = None, links_file = None):
 
     return news
 
+
 # Updating news
-def update_news(filepath, link_file = None):
+def update_news(filepath, link_file=None):
     browser = create_browser()
     news = get_all_news(browser, link_file)
     dump_json(news, filepath)
-

@@ -2,7 +2,8 @@ import os
 import time
 import json
 
-TIMER = int(os.getenv('timer'))
+TIMER = int(os.getenv("timer"))
+
 
 # Check file status
 def check_news_file_status(filepath):
@@ -12,18 +13,20 @@ def check_news_file_status(filepath):
         return "outdated"
     else:
         return "updated"
-    
+
+
 # Loading data from json:
-def load_json(file, type = 'list'):
+def load_json(file, type="list"):
     if os.path.exists(file):
         with open(file, "r") as json_file:
             data = json.load(json_file)
         return data
     else:
-        if type == 'list':
+        if type == "list":
             return []
-        elif type == 'dict':
+        elif type == "dict":
             return {}
+
 
 # Searching in news
 def dump_json(var, file):
@@ -36,7 +39,7 @@ def find_matching_indexes(all_news, prompt):
     chars_to_remove = ",.!?\\/()[]}{:;'#*"
     prompt = prompt.lower()
     for char in chars_to_remove:
-        prompt = prompt.replace(char, '')
+        prompt = prompt.replace(char, "")
     prompt_words = prompt.split()
     matching_indexes = [[] for _ in range(len(all_news))]
 
@@ -46,7 +49,8 @@ def find_matching_indexes(all_news, prompt):
                 matching_indexes[ind].append(index)
 
         return matching_indexes
-    
+
+
 def str_to_bool(envar):
     if envar == "True":
         return True

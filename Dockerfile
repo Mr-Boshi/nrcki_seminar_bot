@@ -5,53 +5,41 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # Install dependencies
-RUN apt-get update -y && apt-get install -y wget xvfb unzip jq curl
-
-# Install Google Chrome dependencies
-RUN apt-get install -y libxss1 libappindicator1 libgconf-2-4 \
+RUN apt-get update -y && apt-get install -y wget xvfb unzip jq curl \
+    libxss1 libappindicator1 libgconf-2-4 \
     fonts-liberation libasound2 libnspr4 libnss3 libx11-xcb1 libxtst6 lsb-release xdg-utils \
     libgbm1 libnss3 libatk-bridge2.0-0 libgtk-3-0 libx11-xcb1 libxcb-dri3-0
 
 
-# Fetch the latest version numbers and URLs for Chrome and ChromeDriver
-RUN curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json > /tmp/versions.json
-
-RUN CHROME_URL=$(jq -r '.channels.Stable.downloads.chrome[] | select(.platform=="linux64") | .url' /tmp/versions.json) && \
+# Fetch the latest version numbers and URLs for Chrome and ChromeDriver and install them
+RUN curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json > /tmp/versions.json \
+    CHROME_URL=$(jq -r '.channels.Stable.downloads.chrome[] | select(.platform=="linux64") | .url' /tmp/versions.json) && \
     wget -q --continue -O /tmp/chrome-linux64.zip $CHROME_URL && \
-    unzip /tmp/chrome-linux64.zip -d /opt/chrome
-
-RUN chmod +x /opt/chrome/chrome-linux64/chrome
-
-
-RUN CHROMEDRIVER_URL=$(jq -r '.channels.Stable.downloads.chromedriver[] | select(.platform=="linux64") | .url' /tmp/versions.json) && \
+    unzip /tmp/chrome-linux64.zip -d /opt/chrome \
+    chmod +x /opt/chrome/chrome-linux64/chrome \
+    CHROMEDRIVER_URL=$(jq -r '.channels.Stable.downloads.chromedriver[] | select(.platform=="linux64") | .url' /tmp/versions.json) && \
     wget -q --continue -O /tmp/chromedriver-linux64.zip $CHROMEDRIVER_URL && \
     unzip /tmp/chromedriver-linux64.zip -d /opt/chromedriver && \
-    chmod +x /opt/chromedriver/chromedriver-linux64/chromedriver
+    chmod +x /opt/chromedriver/chromedriver-linux64/chromedriver \
+    rm /tmp/chrome-linux64.zip /tmp/chromedriver-linux64.zip /tmp/versions.json
 
-# Set up Chromedriver Environment variables
-ENV CHROMEDRIVER_DIR /opt/chromedriver
-ENV PATH $CHROMEDRIVER_DIR:$PATH
+# Set up Environment variables
+ENV CHROMEDRIVER_DIR=/opt/chromedriver \
+    PATH=$CHROMEDRIVER_DIR:$PATH \
+    bot_token='changeme' \
+    chat_id='changeme' \
+    admin_id='changeme' \
+    timer=1 \
+    rate_limit=3 \
+    silent_start=False \
+    IN_DOCKER=1
 
-# Clean upa
-RUN rm /tmp/chrome-linux64.zip /tmp/chromedriver-linux64.zip /tmp/versions.json
-
-# Set your environment variables using the ENV instruction
-ENV bot_token  = 'changeme'
-ENV chat_id    = 'changeme'
-ENV admin_id   = 'changeme'
-ENV timer      = 1
-ENV rate_limit = 3
-ENV silent_start = False
-ENV IN_DOCKER  = 1
-
-RUN echo "Europe/Moscow" > /etc/timezone
-RUN dpkg-reconfigure -f noninteractive tzdata
+RUN echo "Europe/Moscow" > /etc/timezone \
+    dpkg-reconfigure -f noninteractive tzdata
 
 # Set the working directory in the container
-WORKDIR /app
-RUN mkdir /modules
-RUN mkdir /bot
-RUN mkdir /data
+# Create necessary directories
+RUN mkdir -p /app/modules /app/bot /app/data
 
 # Copy the Python requirements file
 COPY requirements.txt .

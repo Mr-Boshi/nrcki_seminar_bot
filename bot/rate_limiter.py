@@ -1,16 +1,23 @@
-import time
+from time import time
 
 
 class RateLimiter:
     def __init__(self, rate_limit):
         self.rate_limit = rate_limit
-        self.last_request_time = 0
+        self.last_request_time = self.int_time()
 
     def ready(self):
-        current_time = time.time()
-        elapsed_time = current_time - self.last_request_time
-        if elapsed_time < self.rate_limit:
+        if self.remain() <= 0:
+            self.flush()
+            return True
+        else:
             return False
 
-        self.last_request_time = time.time()
-        return True
+    def int_time(self):
+        return int(round(time()))
+
+    def flush(self):
+        self.last_request_time = self.int_time()
+
+    def remain(self):
+        return self.rate_limit - (self.int_time() - self.last_request_time)

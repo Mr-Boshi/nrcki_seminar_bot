@@ -5,15 +5,16 @@ from bot.command_handlers import (
     echo_last_find,
     echo_keyboard_callback,
     echo_notify,
-    echo_responces
+    echo_responces,
 )
 
 
 # Load environment variables from the .env file
-CHAT  = int(os.getenv('chat_id'))
-ADMIN = int(os.getenv('admin_id'))
-RATE  = float(os.getenv('rate_limit'))
-TIMER = int(os.getenv('timer'))
+CHAT = int(os.getenv("chat_id"))
+ADMIN = int(os.getenv("admin_id"))
+RATE = float(os.getenv("rate_limit"))
+TIMER = int(os.getenv("timer"))
+
 
 ## Setting bot handlers
 # ==============================================================================
@@ -27,10 +28,11 @@ def setup_handlers(bot, config, limiter):
     echo_notify(bot, states_file)
     echo_responces(bot, config, limiter)
 
+
 def run_bot(bot):
     while True:
         try:
-            bot.infinity_polling()
+            # bot.infinity_polling()
+            bot.polling(timeout=10, long_polling_timeout = 5)
         except Exception as e:
-            print(f'Got an error while polling: {e}')
-    
+            print(f"Got an error while polling: {e}")

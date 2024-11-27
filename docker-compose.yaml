@@ -1,27 +1,24 @@
 services:
   seminar-bot:
         container_name: seminar-bot
-        build:
-          context: .
-          dockerfile: Dockerfile
         restart: unless-stopped
-        logging:
-            options:
-                max-size: 1m
-        ports:
-          - 8080:8080
+        deploy:
+          resources:
+            limits:
+              cpus: '1.0'
+              memory: 250M
+#        logging:
+#            options:
+#                max-size: 1m
         environment:
-          - bot_token=CHANGEME
-          - chat_id=CHANGEME
-          - admin_id=CHANGEME
-          - moderators_id=CHANGEME
-          - ssl_sert=/app/cert/fullchain.pem
-          - ssl_privkey=/app/privkey.pem
-          - webhook_port=8080
-          # - timer=1
-          # - rate_limit=0.5
-          # - silent_start=True
+          - bot_token=${token}
+          - chat_id=${chat_id}
+          - admin_id=${admin_id}
+          - moderators_id=${mods_list}
+          - timer=1
+          - rate_limit=0.5
+          - silent_start=False
+          - check_debug=False
         volumes:
-            # - ./:/app/news
-            # - ./letsencrypt:/app/cert:ro
-        image: seminar_bot:0.9.0
+            - ./nrcki-bot:/app/data
+        image: mrboshi/seminar_bot:0.10.9
