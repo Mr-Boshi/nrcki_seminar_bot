@@ -5,11 +5,14 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # Install dependencies
-RUN apt-get update -y && apt-get install -y wget xvfb unzip jq curl \
-    libxss1 libappindicator1 libgconf-2-4 \
-    fonts-liberation libasound2 libnspr4 libnss3 libx11-xcb1 libxtst6 lsb-release xdg-utils \
-    libgbm1 libnss3 libatk-bridge2.0-0 libgtk-3-0 libx11-xcb1 libxcb-dri3-0
+RUN apt-get update -y && apt-get install -y --no-install-recommends wget xvfb unzip jq curl \
+libxss1 libappindicator1 libgconf-2-4 \
+fonts-liberation libasound2 libnspr4 libnss3 libx11-xcb1 libxtst6 lsb-release xdg-utils \
+libgbm1 libnss3 libatk-bridge2.0-0 libgtk-3-0 libx11-xcb1 libxcb-dri3-0
 
+# Set up Environment variables for ChromeDriver
+ENV CHROMEDRIVER_DIR=/opt/chromedriver \
+    PATH=$CHROMEDRIVER_DIR:$PATH
 
 # Fetch the latest version numbers and URLs for Chrome and ChromeDriver and install them
 RUN curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json > /tmp/versions.json \
@@ -23,10 +26,8 @@ RUN curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-goo
     chmod +x /opt/chromedriver/chromedriver-linux64/chromedriver \
     rm /tmp/chrome-linux64.zip /tmp/chromedriver-linux64.zip /tmp/versions.json
 
-# Set up Environment variables
-ENV CHROMEDRIVER_DIR=/opt/chromedriver \
-    PATH=$CHROMEDRIVER_DIR:$PATH \
-    bot_token='changeme' \
+# Set up Environment variables for Telegram bot
+ENV    bot_token='changeme' \
     chat_id='changeme' \
     admin_id='changeme' \
     timer=1 \
@@ -37,7 +38,6 @@ ENV CHROMEDRIVER_DIR=/opt/chromedriver \
 RUN echo "Europe/Moscow" > /etc/timezone \
     dpkg-reconfigure -f noninteractive tzdata
 
-# Set the working directory in the container
 # Create necessary directories
 RUN mkdir -p /app/modules /app/bot /app/data
 
