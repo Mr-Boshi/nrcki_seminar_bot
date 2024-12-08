@@ -93,6 +93,10 @@ def notify_new_seminar(config, bot, limiter, chats, seminar_index, new_entries, 
     seminars = config["seminars"]
     hashtags = config["hashtags"]
     hashtag = "\n" + hashtags[seminar_index] + " " + hashtags[-1]
+
+    new_news_count = len(news)
+    old_news_count = new_news_count - new_entries
+
     if new_entries == 1:
         for chat in chats:
             info_text = f"Внимание! Новый семинар. {seminars[seminar_index]}"
@@ -128,5 +132,5 @@ def notify_new_seminar(config, bot, limiter, chats, seminar_index, new_entries, 
     elif new_entries < 0:
         bot.send_message(
             chat_id=ADMIN,
-            text="Number of entries got LOWER. Something is WRONG.",
+            text=f"Number of entries got LOWER: from {old_news_count} to {new_news_count}. Something is WRONG.",
         )

@@ -59,7 +59,15 @@ def command_extractor(text):
 # Handle simple commands: /hello, /subscribe, /unsubscribe, /list_subs, /update
 def echo_simple_commands(bot: TeleBot, limiter, config):
     @bot.message_handler(
-        commands=["start", "hello", "subscribe", "unsubscribe", "list_subs", "update"]
+        commands=[
+            "start",
+            "hello",
+            "subscribe",
+            "unsubscribe",
+            "list_subs",
+            "update",
+            "info",
+        ]
     )
     def simple_commands(message):
         subs_file = config["subs_file"]
@@ -93,12 +101,12 @@ def echo_simple_commands(bot: TeleBot, limiter, config):
 
         elif command == "list_subs":
             user_id = message.from_user.id
-            if subscriptions == []:
-                text = "No subscriptions."
-            else:
-                text = ", ".join(str(x) for x in subscriptions) + "."
-
             if user_id == ADMIN:
+                if subscriptions == []:
+                    text = "No subscriptions."
+                else:
+                    text = ", ".join(str(x) for x in subscriptions) + "."
+
                 bot.reply_to(message, text=text)
             else:
                 bot.reply_to(message, text="Для этого нужно быть админом бота.")
@@ -112,6 +120,22 @@ def echo_simple_commands(bot: TeleBot, limiter, config):
 
                 bot.delete_message(chat_id=message.chat.id, message_id=reply.message_id)
                 bot.reply_to(message, text="Сделано, босс!")
+            else:
+                bot.reply_to(message, text="Для этого нужно быть админом бота.")
+
+        elif command == "info":
+            if user_id == ADMIN:
+                newsfile = config["news_file"]
+                seminars = config["seminars"]
+                news_modified = time.ctime(os.path.getmtime(newsfile))
+                news = load_json(newsfile)
+                text = f"Bot runs, news checked at {news_modified}, number of seminars stored: "
+                if isinstance(news, list):
+                    for seminar, name in zip(news, seminars):
+                        text += f"{name} -- {len(seminar)}, "
+                    text = text[0:-1] + "."
+
+                bot.reply_to(message, text=text)
             else:
                 bot.reply_to(message, text="Для этого нужно быть админом бота.")
 
