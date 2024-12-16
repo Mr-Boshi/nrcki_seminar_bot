@@ -32,7 +32,6 @@ def setup_handlers(bot, config, limiter):
 def run_bot(bot):
     while True:
         try:
-            # bot.infinity_polling()
             bot.polling(timeout=10, long_polling_timeout = 5)
         except Exception as e:
             print(f"Got an error while polling: {e}")

@@ -1,7 +1,7 @@
 import os
 import time
 from modules.news_handler import pagagraphs_md, update_news
-from modules.common import check_news_file_status, load_json, str_to_bool
+from modules.common import check_news_file_status, load_json, str_to_bool, dump_json
 
 # Load environment variables from the .env file
 CHAT = int(os.getenv("chat_id"))
@@ -9,6 +9,7 @@ ADMIN = int(os.getenv("admin_id"))
 RATE = float(os.getenv("rate_limit"))
 TIMER = int(os.getenv("timer"))
 DEBUG = str_to_bool(os.getenv("check_debug"))
+SILENT_SRT = str_to_bool(os.getenv("silent_start"))
 
 
 ## Some general purpose functions
@@ -67,7 +68,6 @@ def check_new_entries(config, bot, limiter, file_status=None):
     if file_status == "absent":
         print("News file not found, loading news.")
         update_news(filepath, linkfile)
-        return
 
     elif file_status == "outdated":
         old_news = load_json(filepath)
@@ -81,21 +81,32 @@ def check_new_entries(config, bot, limiter, file_status=None):
             new_entries = len(new_news_seminar) - len(old_news_seminar)
             chats = [CHAT] + subscriptions
 
-            if new_entries != 0:
+            #If some new entries are found -- notify chat
+            if new_entries > 0:
                 notify_new_seminar(
                     config, bot, limiter, chats, i, new_entries, new_news
                 )
-            elif DEBUG:
-                bot.send_message(chat_id=ADMIN, text="Nothing new, working good.")
+           
+            #If a number of entries got lower -- revert to old news file contents and notify admin
+            elif new_entries < 0 and not SILENT_SRT:
+                news_to_fallback    = new_news
+                news_to_fallback[i] = old_news_seminar
+                dump_json(news_to_fallback, filepath)
+                bot.send_message(
+                    chat_id=ADMIN,
+                    text=f"Number of entries got LOWER: from {len(old_news_seminar)} to {len(new_news_seminar)}. Something is WRONG.",
+                )
+
+            #If a number of entries did not change -- notify admin if in debug mode
+            else:
+                if DEBUG:
+                    bot.send_message(chat_id=ADMIN, text="Nothing new, working good.")
 
 
 def notify_new_seminar(config, bot, limiter, chats, seminar_index, new_entries, news):
     seminars = config["seminars"]
     hashtags = config["hashtags"]
     hashtag = "\n" + hashtags[seminar_index] + " " + hashtags[-1]
-
-    new_news_count = len(news)
-    old_news_count = new_news_count - new_entries
 
     if new_entries == 1:
         for chat in chats:
@@ -128,9 +139,3 @@ def notify_new_seminar(config, bot, limiter, chats, seminar_index, new_entries, 
                 info_text,
                 hashtag,
             )
-
-    elif new_entries < 0:
-        bot.send_message(
-            chat_id=ADMIN,
-            text=f"Number of entries got LOWER: from {old_news_count} to {new_news_count}. Something is WRONG.",
-        )

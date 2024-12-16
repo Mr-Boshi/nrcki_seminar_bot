@@ -73,6 +73,7 @@ def echo_simple_commands(bot: TeleBot, limiter, config):
         subs_file = config["subs_file"]
         command, _ = command_extractor(message.text)
         subscriptions = load_json(subs_file)
+        user_id = message.from_user.id
 
         # Handle greetengs
         if command in ["start", "hello"]:
@@ -84,7 +85,6 @@ def echo_simple_commands(bot: TeleBot, limiter, config):
             bot.reply_to(message, text)
 
         elif command == "subscribe":
-            user_id = message.from_user.id
             bot.reply_to(message, "Вы были успешно добавлены в список рассылки")
             # Set the state for the user
             if user_id not in subscriptions:
@@ -92,7 +92,6 @@ def echo_simple_commands(bot: TeleBot, limiter, config):
                 dump_json(subscriptions, subs_file)
 
         elif command == "unsubscribe":
-            user_id = message.from_user.id
             bot.reply_to(message, "Больше уведомления вам приходить не будут")
             # Set the state for the user
             if user_id in subscriptions:
@@ -100,7 +99,6 @@ def echo_simple_commands(bot: TeleBot, limiter, config):
                 dump_json(subscriptions, subs_file)
 
         elif command == "list_subs":
-            user_id = message.from_user.id
             if user_id == ADMIN:
                 if subscriptions == []:
                     text = "No subscriptions."
@@ -112,7 +110,6 @@ def echo_simple_commands(bot: TeleBot, limiter, config):
                 bot.reply_to(message, text="Для этого нужно быть админом бота.")
 
         elif command == "update":
-            user_id = message.from_user.id
             if user_id == ADMIN:
                 reply = bot.reply_to(message, text="Есть, босс!")
 
