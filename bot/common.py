@@ -9,7 +9,7 @@ ADMIN = int(os.getenv("admin_id"))
 RATE = float(os.getenv("rate_limit"))
 TIMER = int(os.getenv("timer"))
 DEBUG = str_to_bool(os.getenv("check_debug"))
-SILENT_SRT = str_to_bool(os.getenv("silent_start"))
+SILENT_MODE = str_to_bool(os.getenv("silent_mode"))
 
 
 ## Some general purpose functions
@@ -88,7 +88,7 @@ def check_new_entries(config, bot, limiter, file_status=None):
                 )
            
             #If a number of entries got lower -- revert to old news file contents and notify admin
-            elif new_entries < 0 and not SILENT_SRT:
+            elif new_entries < 0 and not SILENT_MODE:
                 news_to_fallback    = new_news
                 news_to_fallback[i] = old_news_seminar
                 dump_json(news_to_fallback, filepath)

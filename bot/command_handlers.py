@@ -129,8 +129,9 @@ def echo_simple_commands(bot: TeleBot, limiter, config):
                 text = f"Bot runs, news checked at {news_modified}, number of seminars stored: "
                 if isinstance(news, list):
                     for seminar, name in zip(news, seminars):
-                        text += f"{name} -- {len(seminar)}, "
-                    text = text[0:-1] + "."
+                        line = '\n' + f"{name} -- {len(seminar)}, "
+                        text += line
+                    text = text[0:-2] + "."
 
                 bot.reply_to(message, text=text)
             else:

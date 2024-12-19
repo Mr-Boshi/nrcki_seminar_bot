@@ -17,7 +17,7 @@ services:
           - moderators_id=${mods_list}
           - timer=1
           - rate_limit=0.5
-          - silent_start=False
+          - silent_mode=False
           - check_debug=False
         volumes:
             - ./nrcki-bot:/app/data

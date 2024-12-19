@@ -29,7 +29,7 @@ def run_schedule(TIMER):
 BOT_TOKEN = os.getenv("bot_token")
 ADMIN = int(os.getenv("admin_id"))
 RATE = float(os.getenv("rate_limit"))
-SILENT_SRT = str_to_bool(os.getenv("silent_start"))
+SILENT_MODE = str_to_bool(os.getenv("silent_mode"))
 TIMER = int(os.getenv("timer"))
 
 # Setting up the names of files to store news and subscriptions.
@@ -78,7 +78,7 @@ if __name__ == "__main__":
         os.remove(config["states_file"])
 
     # Send greeting message
-    if not SILENT_SRT:
+    if not SILENT_MODE:
         bot.send_message(chat_id=ADMIN, text="Бот запущен!")
 
     Thread(target=run_bot, args=(bot,)).start()

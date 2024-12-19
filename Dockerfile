@@ -32,7 +32,7 @@ ENV CHROMEDRIVER_DIR=/opt/chromedriver \
     admin_id='changeme' \
     timer=1 \
     rate_limit=3 \
-    silent_start=False \
+    silent_mode=False \
     IN_DOCKER=1
 
 RUN echo "Europe/Moscow" > /etc/timezone \
