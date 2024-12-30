@@ -86,3 +86,8 @@ def load_config(filename):
     with open(filename, 'r') as file:
         config = yaml.load(file)
     return config
+
+def increment_counter(increment, seminar_index, filename):
+    counters = load_json(filename)
+    counters[seminar_index] += increment
+    dump_json(counters, filename)

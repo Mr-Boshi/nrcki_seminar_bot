@@ -39,7 +39,6 @@ os.makedirs(filedir, exist_ok=True)
 
 # Setup config dict
 config = load_config(CONFIG_FILE)
-config["keybord_options"] = config["seminars"] + ["Все!"]
 config["hashtags"] = config["hashtags"] + ["#Семинар"]
 config["news_file"] = os.path.join(filedir, "news.json")
 config["subs_file"] = os.path.join(filedir, "subscribtions.json")

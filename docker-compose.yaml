@@ -20,5 +20,6 @@ services:
           - silent_mode=False
           - check_debug=False
         volumes:
-            - ./nrcki-bot:/app/data
+            - ./nrcki-bot/data:/app/data
+            - ./nrcki-bot/config:/app/config
         image: mrboshi/seminar_bot:0.10.9

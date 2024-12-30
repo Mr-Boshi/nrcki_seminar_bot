@@ -19,13 +19,10 @@ TIMER = int(os.getenv("timer"))
 ## Setting bot handlers
 # ==============================================================================
 def setup_handlers(bot, config, limiter):
-    keybord_options = config["keybord_options"]
-    states_file = config["states_file"]
-
     echo_simple_commands(bot, limiter, config)
-    echo_last_find(bot, keybord_options)
+    echo_last_find(bot, config["seminars"])
     echo_keyboard_callback(bot, config, limiter)
-    echo_notify(bot, states_file)
+    echo_notify(bot, config["states_file"])
     echo_responces(bot, config, limiter)
 
 

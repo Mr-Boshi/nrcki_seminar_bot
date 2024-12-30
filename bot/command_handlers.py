@@ -27,11 +27,23 @@ RATE = float(os.getenv("rate_limit"))
 # Creating keyboard for /last, /find and /setcount commands
 def setup_keyboard(keybord_options, prefix, num, include_all = True):
     keyboard = InlineKeyboardMarkup()
-    option_range = len(keybord_options) if include_all else len(keybord_options) - 1
-    for i in range(option_range):
+    for i in range(len(keybord_options)):
         keyboard.row(
             InlineKeyboardButton(
                 keybord_options[i], callback_data=f"{prefix}_{i}_{num}"
+            )
+        )
+
+    if include_all:
+        keyboard.row(
+            InlineKeyboardButton(
+                'Все!', callback_data=f"{prefix}_{-1}_{num}"
+            )
+        )
+    
+    keyboard.row(
+            InlineKeyboardButton(
+                'Отмена', callback_data=f"{prefix}_{-10}_{num}"
             )
         )
 
@@ -200,36 +212,37 @@ def echo_keyboard_callback(bot: TeleBot, config, limiter):
             # Handle the error if the message does not exist
             print(f"Error deleting message: {e}")
 
-        if command == "last":
-            news = load_json(newsfile)
-            info_text = "Последние семинары тематики '{}':"
-            if selected == 4:
-                entries = [entries, entries, entries, entries]
-                send_entries_from_all_seminars(
-                    config, bot, limiter, chat_id, seminars, entries, news, info_text, hashtags
-                )
-            else:
-                hashtag = "\n" + hashtags[selected] + " " + hashtags[-1]
-                info_text = info_text.format(seminars[selected])
-                send_entries_from_one_seminar(
-                    config, bot, limiter, chat_id, selected, entries, news, info_text, hashtag
-                )
+        if selected != -10:
+            if command == "last":
+                news = load_json(newsfile)
+                info_text = "Последние семинары тематики '{}':"
+                if selected == -1:
+                    entries = [entries, entries, entries, entries]
+                    send_entries_from_all_seminars(
+                        config, bot, limiter, chat_id, seminars, entries, news, info_text, hashtags
+                    )
+                else:
+                    hashtag = "\n" + hashtags[selected] + " " + hashtags[-1]
+                    info_text = info_text.format(seminars[selected])
+                    send_entries_from_one_seminar(
+                        config, bot, limiter, chat_id, selected, entries, news, info_text, hashtag
+                    )
 
-        elif command == "find":
-            user_states = load_json(states_file, "dict")
-            user_states[user_id] = "waiting_for_prompt" + "_" + str(selected)
-            dump_json(user_states, states_file)
-            bot.send_message(
-                chat_id, "Пожалуйста, отправьте поисковый запрос следующим сообщением."
-            )
-        
-        elif command == "setcount":
-            user_states = load_json(states_file, "dict")
-            user_states[user_id] = "waiting_for_counter" + "_" + str(selected)
-            dump_json(user_states, states_file)
-            bot.send_message(
-                chat_id, "Пожалуйста, отправьте номер последнего семинара следующим сообщением."
-            )
+            elif command == "find":
+                user_states = load_json(states_file, "dict")
+                user_states[user_id] = "waiting_for_prompt" + "_" + str(selected)
+                dump_json(user_states, states_file)
+                bot.send_message(
+                    chat_id, "Пожалуйста, отправьте поисковый запрос следующим сообщением."
+                )
+            
+            elif command == "setcount":
+                user_states = load_json(states_file, "dict")
+                user_states[user_id] = "waiting_for_counter" + "_" + str(selected)
+                dump_json(user_states, states_file)
+                bot.send_message(
+                    chat_id, "Пожалуйста, отправьте номер последнего семинара следующим сообщением."
+                )
 
 
 # Handle /notify command
@@ -277,7 +290,7 @@ def echo_responces(bot: TeleBot, config, limiter):
             news = load_json(config["news_file"])
             matching_indexes = find_matching_indexes(news, prompt)
 
-            if selected == 4:
+            if selected == -1:
                 if any(sublist for sublist in matching_indexes):
                     info_text = "Найдено среди семинаров '{}':"
                     print(matching_indexes)

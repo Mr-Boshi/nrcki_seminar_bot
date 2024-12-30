@@ -1,7 +1,7 @@
 import os
 import time
 from modules.news_handler import pagagraphs_md, update_news
-from modules.common import check_news_file_status, load_json, str_to_bool, dump_json
+from modules.common import check_news_file_status, load_json, str_to_bool, dump_json, increment_counter
 
 # Load environment variables from the .env file
 CHAT = int(os.getenv("chat_id"))
@@ -62,6 +62,7 @@ def check_new_entries(config, bot, limiter, file_status=None):
     subsfile = config["subs_file"]
     filepath = config["news_file"]
     linkfile = config["links_file"]
+    numfile  = config["nums_file"]
 
     subscriptions = load_json(subsfile)
 
@@ -86,6 +87,7 @@ def check_new_entries(config, bot, limiter, file_status=None):
 
             #If some new entries are found -- notify chat
             if new_entries > 0:
+                increment_counter(new_entries, i, numfile)
                 notify_new_seminar(
                     config, bot, limiter, chats, i, new_entries, new_news
                 )
