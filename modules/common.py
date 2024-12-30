@@ -1,6 +1,7 @@
 import os
 import time
 import json
+from ruamel.yaml import YAML
 
 TIMER = int(os.getenv("timer"))
 
@@ -48,7 +49,7 @@ def find_matching_indexes(all_news, prompt):
             if all(word in item.lower() for word in prompt_words):
                 matching_indexes[ind].append(index)
 
-        return matching_indexes
+    return matching_indexes
 
 
 def str_to_bool(envar):
@@ -79,3 +80,9 @@ def string_to_number_list(input_string):
         number_list.append(number)
 
     return number_list
+
+def load_config(filename):
+    yaml = YAML()
+    with open(filename, 'r') as file:
+        config = yaml.load(file)
+    return config

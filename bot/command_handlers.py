@@ -24,10 +24,11 @@ RATE = float(os.getenv("rate_limit"))
 
 ## Some general purpose functions
 # ==============================================================================
-# Creating keyboard for /last and /find commands
-def setup_keyboard(keybord_options, prefix, num):
+# Creating keyboard for /last, /find and /setcount commands
+def setup_keyboard(keybord_options, prefix, num, include_all = True):
     keyboard = InlineKeyboardMarkup()
-    for i in range(len(keybord_options)):
+    option_range = len(keybord_options) if include_all else len(keybord_options) - 1
+    for i in range(option_range):
         keyboard.row(
             InlineKeyboardButton(
                 keybord_options[i], callback_data=f"{prefix}_{i}_{num}"
@@ -126,10 +127,10 @@ def echo_simple_commands(bot: TeleBot, limiter, config):
                 seminars = config["seminars"]
                 news_modified = time.ctime(os.path.getmtime(newsfile))
                 news = load_json(newsfile)
-                text = f"Bot runs, news checked at {news_modified}, number of seminars stored: "
+                text = f"Бот запущен, новости проверены в {news_modified} UTC, записаное количество семинаров: "
                 if isinstance(news, list):
                     for seminar, name in zip(news, seminars):
-                        line = '\n' + f"{name} -- {len(seminar)}, "
+                        line = '\n' + f"{name} — {len(seminar)}, "
                         text += line
                     text = text[0:-2] + "."
 
@@ -138,17 +139,26 @@ def echo_simple_commands(bot: TeleBot, limiter, config):
                 bot.reply_to(message, text="Для этого нужно быть админом бота.")
 
 
-# Handle commands that require a keyboard: /last, /find
+# Handle commands that require a keyboard: /last, /find and /setcount
 def echo_last_find(bot: TeleBot, keybord_options):
-    @bot.message_handler(commands=["last", "find"])
+    @bot.message_handler(commands=["last", "find", "setcount"])
     def find_last_keyboard(message):
         if message.chat.type == "private":
+            user_id = message.from_user.id
             command, num = command_extractor(message.text)
 
             # Sleep for 0.5 to avoid rate-limit
             time.sleep(0.5)
-
-            keyboard = setup_keyboard(keybord_options, command, num)
+            if command in ["last", "find"]:
+                keyboard = setup_keyboard(keybord_options, command, num)
+            
+            elif command == "setcount" and user_id == ADMIN:
+                keyboard = setup_keyboard(keybord_options, command, num, include_all = False)
+            
+            else:
+                bot.reply_to(message, text="Для этого нужно быть админом бота.")
+                return
+            
             bot.send_message(
                 message.chat.id,
                 "Какие семинары вас интересуют?:",
@@ -162,7 +172,7 @@ def echo_last_find(bot: TeleBot, keybord_options):
             )
 
 
-# Handle keyboard responce for /last and /find commands
+# Handle keyboard responce for /last, /find and /setcount commands
 def echo_keyboard_callback(bot: TeleBot, config, limiter):
     @bot.callback_query_handler(func=lambda message: True)
     def keyboard_callback_handler(call):
@@ -170,15 +180,18 @@ def echo_keyboard_callback(bot: TeleBot, config, limiter):
         bot.answer_callback_query(call.id)
         chat_id = call.message.chat.id
         user_id = call.from_user.id
+
         newsfile = config["news_file"]
         states_file = config["states_file"]
         seminars = config["seminars"]
         hashtags = config["hashtags"]
 
+
         # Extract selected index and entries range from call data
-        command = call.data[:4]
-        selected = int(call.data[5])
-        entries = range(int(call.data[7:]))
+        call_data = call.data.split('_')
+        command = call_data[0]
+        selected = int(call_data[1])
+        entries = range(int(call_data[2]))
 
         # Delete the original message
         try:
@@ -193,13 +206,13 @@ def echo_keyboard_callback(bot: TeleBot, config, limiter):
             if selected == 4:
                 entries = [entries, entries, entries, entries]
                 send_entries_from_all_seminars(
-                    bot, limiter, chat_id, seminars, entries, news, info_text, hashtags
+                    config, bot, limiter, chat_id, seminars, entries, news, info_text, hashtags
                 )
             else:
                 hashtag = "\n" + hashtags[selected] + " " + hashtags[-1]
                 info_text = info_text.format(seminars[selected])
                 send_entries_from_one_seminar(
-                    bot, limiter, chat_id, selected, entries, news, info_text, hashtag
+                    config, bot, limiter, chat_id, selected, entries, news, info_text, hashtag
                 )
 
         elif command == "find":
@@ -208,6 +221,14 @@ def echo_keyboard_callback(bot: TeleBot, config, limiter):
             dump_json(user_states, states_file)
             bot.send_message(
                 chat_id, "Пожалуйста, отправьте поисковый запрос следующим сообщением."
+            )
+        
+        elif command == "setcount":
+            user_states = load_json(states_file, "dict")
+            user_states[user_id] = "waiting_for_counter" + "_" + str(selected)
+            dump_json(user_states, states_file)
+            bot.send_message(
+                chat_id, "Пожалуйста, отправьте номер последнего семинара следующим сообщением."
             )
 
 
@@ -261,6 +282,7 @@ def echo_responces(bot: TeleBot, config, limiter):
                     info_text = "Найдено среди семинаров '{}':"
                     print(matching_indexes)
                     send_entries_from_all_seminars(
+                        config,
                         bot,
                         limiter,
                         chat_id,
@@ -278,6 +300,7 @@ def echo_responces(bot: TeleBot, config, limiter):
                         seminars[selected]
                     )
                     send_entries_from_one_seminar(
+                        config, 
                         bot,
                         limiter,
                         chat_id,
@@ -290,6 +313,7 @@ def echo_responces(bot: TeleBot, config, limiter):
                     bot.send_message(chat_id, "Ничего не найдено.")
 
         elif user_id in user_states and "message" in user_states[user_id]:
+            e = ''
             new_post = message.text
 
             # Clear the state for the user
@@ -297,3 +321,23 @@ def echo_responces(bot: TeleBot, config, limiter):
 
             bot.send_message(chat_id=CHAT, text=new_post)
             bot.send_message(chat_id=chat_id, text="Ваше сообщение отправлено.")
+        
+        elif user_id in user_states and "counter" in user_states[user_id]:
+            try:
+                new_counter = int(message.text)
+                selected = int(user_states[user_id][-1])
+            except Exception as e:
+                print(f'Problem getting number from message: {e}')
+                new_counter = None
+
+            # Clear the state for the user
+            del user_states[user_id]
+
+            if new_counter is not None: 
+                counters = load_json(config["nums_file"], "dict")
+                counters[selected] = new_counter
+                dump_json(counters, config["nums_file"])
+                
+                bot.send_message(chat_id=chat_id, text=f"Последнему семинару в '{seminars[selected]}' задан номер {new_counter}.")
+            else:
+                bot.send_message(chat_id=chat_id, text=f"Ошибка: {e}. Вы точно отправили число?")

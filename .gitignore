@@ -1,3 +1,4 @@
 .env
+.env-bot
 data/*
 __pycache__
