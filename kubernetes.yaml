@@ -1,0 +1,73 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: seminar-bot
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: seminar-bot
+  name: seminar-bot
+  namespace: seminar-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: seminar-bot
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: seminar-bot
+    spec:
+      containers:
+        - env:
+            - name: admin_id
+              value: "changeme"
+            - name: bot_token
+              value: "changeme"
+            - name: chat_id
+              value: "changeme"
+            - name: check_debug
+              value: "False"
+            - name: moderators_id
+              value: "changeme"
+            - name: rate_limit
+              value: "0.5"
+            - name: silent_start
+              value: "False"
+            - name: timer
+              value: "1"
+          image: mrboshi/seminar_bot:0.11.1
+          name: seminar-bot
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "640Mi"
+          volumeMounts:
+            - mountPath: /app/data
+              name: data
+      restartPolicy: Always
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: data
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: seminar-bot
+  name: data
+  namespace: seminar-bot
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 128Mi
