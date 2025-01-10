@@ -12,6 +12,7 @@ from bot.common import (
     check_new_entries,
     send_entries_from_one_seminar,
     send_entries_from_all_seminars,
+    resend_message,
 )
 
 # Load environment variables from the .env file
@@ -20,6 +21,7 @@ ADMIN = int(os.getenv("admin_id"))
 MODERATORS = string_to_number_list(os.getenv("moderators_id"))
 TIMER = int(os.getenv("timer"))
 RATE = float(os.getenv("rate_limit"))
+REQ_CHAT = int(os.getenv("request_target"))
 
 
 ## Some general purpose functions
@@ -245,35 +247,44 @@ def echo_keyboard_callback(bot: TeleBot, config, limiter):
                 )
 
 
-# Handle /notify command
+# Handle /notify and /request command
 def echo_notify(bot: TeleBot, states_file):
-    @bot.message_handler(commands=["notify"])
-    def handle_notify(message):
+    @bot.message_handler(commands=["notify", "request"])
+    def handle_forward(message):
+        command, _ = command_extractor(message.text)
         user_states = load_json(states_file, "dict")
         user_id = message.from_user.id
         authorised_users = MODERATORS + [ADMIN]
 
         # Set the state for the user
-        if user_id in authorised_users:
-            user_states[user_id] = "waiting_for_message"
+        if command == 'notify':
+            if user_id in authorised_users:
+                user_states[user_id] = "waiting_for_message"
+                dump_json(user_states, states_file)
+                bot.reply_to(
+                    message, "Пожалуйста, отправьте сообщение для пересылки в чат."
+                )
+            else:
+                bot.reply_to(
+                    message, "Для этого нужно быть модератором или администратором бота."
+                )
+        else:
+            user_states[user_id] = "waiting_for_request"
             dump_json(user_states, states_file)
             bot.reply_to(
-                message, "Пожалуйста, отправьте сообщение для пересылки в чат."
-            )
-        else:
-            bot.reply_to(
-                message, "Для этого нужно быть модератором или администратором бота."
+                message, "Пожалуйста, отправьте свой запрос."
             )
 
 
 # Handling find-messages and forward-messages
 def echo_responces(bot: TeleBot, config, limiter):
-    @bot.message_handler(func=lambda message: True)
+    @bot.message_handler(func=lambda message: True, chat_types=['private'], content_types = ['text', 'photo', 'document'])
     def handle_all_messages(message):
         seminars = config["seminars"]
         user_states = load_json(config["states_file"], "dict")
         user_id = str(message.from_user.id)
         chat_id = message.chat.id
+        forwarded_file = config["forw_file"]
         if user_id in user_states and "prompt" in user_states[user_id]:
             # Process the text provided by the user
             prompt = message.text
@@ -325,15 +336,23 @@ def echo_responces(bot: TeleBot, config, limiter):
                 else:
                     bot.send_message(chat_id, "Ничего не найдено.")
 
-        elif user_id in user_states and "message" in user_states[user_id]:
-            e = ''
-            new_post = message.text
+        elif user_id in user_states and ("message" in user_states[user_id] or "request" in user_states[user_id]):
+
+            if "message" in user_states[user_id]:
+                resend_message(bot, message, CHAT)
+                bot.send_message(chat_id=chat_id, text="Ваше сообщение отправлено.")
+            else:
+                forwarded_message = bot.forward_message(chat_id=REQ_CHAT, from_chat_id=message.chat.id, message_id=message.message_id)
+                bot.send_message(chat_id=chat_id, text="Ваш запрос отправлен.")
+
+                forwarded_messages = load_json(forwarded_file)
+                forwarded_messages[forwarded_message.message_id] = message.chat.id
+                dump_json(forwarded_messages, forwarded_file)
 
             # Clear the state for the user
             del user_states[user_id]
-
-            bot.send_message(chat_id=CHAT, text=new_post)
-            bot.send_message(chat_id=chat_id, text="Ваше сообщение отправлено.")
+            dump_json(user_states, config["states_file"])
+            
         
         elif user_id in user_states and "counter" in user_states[user_id]:
             try:
@@ -341,10 +360,12 @@ def echo_responces(bot: TeleBot, config, limiter):
                 selected = int(user_states[user_id][-1])
             except Exception as e:
                 print(f'Problem getting number from message: {e}')
+                bot.send_message(chat_id=chat_id, text=f"Ошибка: {e}. Вы точно отправили число?")
                 new_counter = None
 
             # Clear the state for the user
             del user_states[user_id]
+            dump_json(user_states, config["states_file"])
 
             if new_counter is not None: 
                 counters = load_json(config["nums_file"], "dict")
@@ -352,5 +373,14 @@ def echo_responces(bot: TeleBot, config, limiter):
                 dump_json(counters, config["nums_file"])
                 
                 bot.send_message(chat_id=chat_id, text=f"Последнему семинару в '{seminars[selected]}' задан номер {new_counter}.")
-            else:
-                bot.send_message(chat_id=chat_id, text=f"Ошибка: {e}. Вы точно отправили число?")
+
+def echo_reply_from_chat(bot: TeleBot, config):
+    @bot.message_handler(func=lambda message: True, chat_types=['group'], content_types = ['text', 'photo', 'document'])
+    def handle_reply(message):
+        if message.chat.id == REQ_CHAT:
+            forwarded_file = config["forw_file"]
+            # Check if the reply is to a forwarded message
+            forwarded_messages = load_json(forwarded_file)
+            original_chat_id = forwarded_messages[str(message.reply_to_message.message_id)]
+
+            resend_message(bot, message, original_chat_id)

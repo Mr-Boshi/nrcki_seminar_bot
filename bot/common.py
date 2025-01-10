@@ -49,11 +49,11 @@ def send_entries_from_all_seminars(
 ):
     for seminar_index, sublist in enumerate(indexes_list):
         if info_text:
-            info_text = info_text.format(seminars[seminar_index])
+            send_info_text = info_text.format(seminars[seminar_index])
         if hashtags:
             hashtag = "\n" + hashtags[seminar_index] + " " + hashtags[-1]
         send_entries_from_one_seminar(
-            config, bot, limiter, chat_id, seminar_index, sublist, news, info_text, hashtag
+            config, bot, limiter, chat_id, seminar_index, sublist, news, send_info_text, hashtag
         )
 
 
@@ -146,3 +146,11 @@ def notify_new_seminar(config, bot, limiter, chats, seminar_index, new_entries, 
                 info_text,
                 hashtag,
             )
+
+def resend_message(bot, message, chat_id):
+    if message.content_type == 'text':
+        bot.send_message(chat_id, message.text)
+    elif message.content_type == 'photo':
+        bot.send_photo(chat_id, message.photo[-1].file_id, caption=message.caption)
+    elif message.content_type == 'document':
+        bot.send_document(chat_id, message.document.file_id, caption=message.caption)

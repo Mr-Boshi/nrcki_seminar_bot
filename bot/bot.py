@@ -6,6 +6,7 @@ from bot.command_handlers import (
     echo_keyboard_callback,
     echo_notify,
     echo_responces,
+    echo_reply_from_chat
 )
 
 
@@ -24,6 +25,7 @@ def setup_handlers(bot, config, limiter):
     echo_keyboard_callback(bot, config, limiter)
     echo_notify(bot, config["states_file"])
     echo_responces(bot, config, limiter)
+    echo_reply_from_chat(bot, config)
 
 
 def run_bot(bot):

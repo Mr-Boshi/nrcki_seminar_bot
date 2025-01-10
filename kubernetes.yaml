@@ -32,6 +32,8 @@ spec:
               value: "changeme"
             - name: chat_id
               value: "changeme"
+            - name: request_target
+              value: "changeme"
             - name: check_debug
               value: "False"
             - name: moderators_id
@@ -42,7 +44,7 @@ spec:
               value: "False"
             - name: timer
               value: "1"
-          image: mrboshi/seminar_bot:0.11.1
+          image: mrboshi/seminar_bot:0.12.0
           name: seminar-bot
           resources:
             limits:

@@ -45,6 +45,7 @@ config["subs_file"] = os.path.join(filedir, "subscribtions.json")
 config["states_file"] = os.path.join(filedir, "states.json")
 config["links_file"] = os.path.join(filedir, "links.json")
 config["nums_file"] = os.path.join(filedir, 'nums.json')
+config["forw_file"] = os.path.join(filedir, 'forwarded_messages.json')
 
 
 # Main loop

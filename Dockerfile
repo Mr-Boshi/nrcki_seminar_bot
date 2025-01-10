@@ -29,6 +29,7 @@ ENV CHROMEDRIVER_DIR=/opt/chromedriver \
     bot_token='changeme' \
     chat_id='changeme' \
     admin_id='changeme' \
+    request_target='changeme' \
     timer=1 \
     rate_limit=3 \
     silent_mode=False \
