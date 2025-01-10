@@ -345,7 +345,7 @@ def echo_responces(bot: TeleBot, config, limiter):
                 forwarded_message = bot.forward_message(chat_id=REQ_CHAT, from_chat_id=message.chat.id, message_id=message.message_id)
                 bot.send_message(chat_id=chat_id, text="Ваш запрос отправлен.")
 
-                forwarded_messages = load_json(forwarded_file)
+                forwarded_messages = load_json(forwarded_file, "dict")
                 forwarded_messages[forwarded_message.message_id] = message.chat.id
                 dump_json(forwarded_messages, forwarded_file)
 
