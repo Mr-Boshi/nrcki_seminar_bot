@@ -9,12 +9,15 @@ from bot.command_handlers import (
     echo_reply_from_chat
 )
 
+from modules.common import str_to_bool
+
 
 # Load environment variables from the .env file
 CHAT = int(os.getenv("chat_id"))
 ADMIN = int(os.getenv("admin_id"))
 RATE = float(os.getenv("rate_limit"))
 TIMER = int(os.getenv("timer"))
+DEBUG = str_to_bool(os.getenv("check_debug"))
 
 
 ## Setting bot handlers
@@ -33,4 +36,7 @@ def run_bot(bot):
         try:
             bot.polling(timeout=10, long_polling_timeout = 5)
         except Exception as e:
-            print(f"Got an error while polling: {e}")
+            text = f"Got an error while polling: {e}"
+            print(text)
+            if DEBUG:
+                bot.send_message(ADMIN, text)

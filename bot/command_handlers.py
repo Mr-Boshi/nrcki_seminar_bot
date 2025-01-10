@@ -375,7 +375,7 @@ def echo_responces(bot: TeleBot, config, limiter):
                 bot.send_message(chat_id=chat_id, text=f"Последнему семинару в '{seminars[selected]}' задан номер {new_counter}.")
 
 def echo_reply_from_chat(bot: TeleBot, config):
-    @bot.message_handler(func=lambda message: message.reply_to_message is not None, chat_types=['group'], content_types = ['text', 'photo', 'document'])
+    @bot.message_handler(func=lambda message: message.reply_to_message is not None, chat_types=['group', 'supergroup'], content_types = ['text', 'photo', 'document'])
     def handle_reply(message):
         if message.chat.id == REQ_CHAT:
             forwarded_file = config["forw_file"]
