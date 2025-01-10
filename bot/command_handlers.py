@@ -383,4 +383,7 @@ def echo_reply_from_chat(bot: TeleBot, config):
             forwarded_messages = load_json(forwarded_file)
             original_chat_id = forwarded_messages[str(message.reply_to_message.message_id)]
 
-            resend_message(bot, message, original_chat_id)
+            if original_chat_id:
+                resend_message(bot, message, original_chat_id)
+            else:
+                bot.send_message(chat_id=REQ_CHAT, text="Не найден отправитель данного сообщения.")
